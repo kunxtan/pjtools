@@ -53,7 +53,7 @@
       if (!options || !options.format) return;
       const { ctx } = chart;
       ctx.save();
-      ctx.font = `500 12px ${FONT}`;
+      ctx.font = `600 12px ${FONT}`;
       ctx.fillStyle = COLORS.text;
       ctx.textBaseline = "middle";
       chart.getDatasetMeta(0).data.forEach((bar, index) => {
@@ -128,7 +128,7 @@
     tooltip.borderWidth = 1;
     tooltip.padding = 10;
     tooltip.titleColor = COLORS.muted;
-    tooltip.titleFont = { weight: "500", size: 12 };
+    tooltip.titleFont = { weight: "400", size: 12 };
     tooltip.bodyColor = COLORS.text;
     tooltip.bodyFont = { weight: "700", size: 14 };
     tooltip.footerColor = COLORS.muted;
@@ -387,7 +387,7 @@
   function showLoadError() {
     document.querySelectorAll(".chart-box").forEach((box) => {
       box.classList.add("chart-box--error");
-      box.textContent = "โหลดกราฟไม่ได้ (ต้องต่ออินเทอร์เน็ตเพื่อโหลด Chart.js) ดูตัวเลขได้จากตารางใต้กราฟ";
+      box.textContent = "โหลดกราฟไม่ได้ (ไม่พบไฟล์ static/js/vendor/chart.umd.js) ดูตัวเลขได้จากตารางใต้กราฟ";
     });
   }
 

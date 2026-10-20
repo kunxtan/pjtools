@@ -11,7 +11,7 @@
 
 ## วิธีติดตั้งและรัน
 
-ต้องมี **Python 3.10 ขึ้นไป** และอินเทอร์เน็ต (สำหรับฟอนต์, Chart.js และ Tableau)
+ต้องมี **Python 3.10 ขึ้นไป** · เว็บใช้งานได้โดยไม่ต้องต่ออินเทอร์เน็ต (ฟอนต์และ Chart.js อยู่ในโปรเจกต์แล้ว) ยกเว้นหน้า Dashboard ที่ต้องโหลดจาก Tableau Public
 
 ```bash
 cd movie-project
@@ -168,17 +168,19 @@ movie-project/
 │   ├── simulator.html  Box Office Simulator
 │   └── dashboard.html  Tableau Dashboard
 └── static/
-    ├── css/style.css   ธีมทั้งหมด (ไม่ใช้ CSS framework)
+    ├── css/style.css   ธีมทั้งหมด และ @font-face ของฟอนต์ในเครื่อง (ไม่ใช้ CSS framework)
+    ├── fonts/          Noto Sans Thai (400/600/700) และ Bebas Neue เป็น .woff2 + ไฟล์สัญญาอนุญาต OFL
     └── js/
         ├── main.js       เมนู, หลอดไฟ marquee, ตัวนับ, กล่องยืนยัน, ตรวจฟอร์ม
         ├── audio.js      เสียงประกอบด้วย Web Audio API
         ├── charts.js     กราฟ Chart.js ในหน้าวิเคราะห์
-        └── simulator.js  การทำงานและแอนิเมชันของ Simulator
+        ├── simulator.js  การทำงานและแอนิเมชันของ Simulator
+        └── vendor/chart.umd.js   Chart.js 4.4.1
 ```
 
 โค้ดอ่าน/เขียน Excel (`data_service.py`) แยกจากโค้ดคำนวณสถิติ (`analysis.py`) ส่วน `app.py` มีเฉพาะ routes
 
-**เทคโนโลยีที่ใช้**: Python Flask, pandas, numpy, openpyxl · HTML, CSS, Vanilla JavaScript · Chart.js (CDN) · ฟอนต์ Noto Sans Thai และ Bebas Neue (Google Fonts)
+**เทคโนโลยีที่ใช้**: Python Flask, pandas, numpy, openpyxl · HTML, CSS, Vanilla JavaScript · Chart.js 4.4.1 (ไฟล์ในเครื่อง, MIT License) · ฟอนต์ Noto Sans Thai และ Bebas Neue (ไฟล์ .woff2 ในเครื่อง, SIL Open Font License)
 
 ---
 
@@ -201,7 +203,8 @@ movie-project/
 | อาการ | วิธีแก้ |
 |---|---|
 | บันทึกไม่ได้ ขึ้นว่าไฟล์ถูกเปิดค้าง | ปิดไฟล์ `data/movies.xlsx` ในโปรแกรม Excel แล้วกดบันทึกอีกครั้ง |
-| กราฟไม่ขึ้น | Chart.js โหลดจากอินเทอร์เน็ต ตรวจการเชื่อมต่อ (ตัวเลขทั้งหมดยังดูได้จากตารางใต้กราฟ) |
+| กราฟไม่ขึ้น | ตรวจว่ามีไฟล์ `static/js/vendor/chart.umd.js` อยู่ (ตัวเลขทั้งหมดยังดูได้จากตารางใต้กราฟ) |
+| Dashboard ไม่ขึ้น | หน้านี้ต้องต่ออินเทอร์เน็ตเพื่อโหลดจาก Tableau Public และต้องใส่ `TABLEAU_URL` ใน `app.py` แล้ว |
 | ขึ้น `Address already in use` | มีเว็บรันค้างอยู่ ปิด Terminal เดิม หรือเปลี่ยนพอร์ตใน `app.run(port=5001)` |
 | อยากเริ่มข้อมูลใหม่จากต้นฉบับ | ลบไฟล์ `data/movies.xlsx` แล้วรัน `python app.py` ระบบจะสร้างใหม่จาก `movies.csv` |
 | VS Code ขึ้นเตือน `Import "flask" could not be resolved` | เลือก Python interpreter ที่ติดตั้งแพ็กเกจไว้ (`Ctrl+Shift+P` → Python: Select Interpreter) |

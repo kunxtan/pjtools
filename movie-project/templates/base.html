@@ -6,9 +6,8 @@
   <title>{% block title %}{{ site_name }}{% endblock %} · {{ site_name }}</title>
   <meta name="description" content="{{ site_name }} — {{ site_tagline }}">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap">
+  {# Fonts load from static/fonts/ via @font-face in style.css (works offline) #}
+  <link rel="preload" href="{{ url_for('static', filename='fonts/noto-sans-thai-thai-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body class="{% block body_class %}{% endblock %}">
