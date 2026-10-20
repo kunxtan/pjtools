@@ -11,7 +11,7 @@ Statistics and models are NOT here; they belong in analysis.py.
 """
 
 import os
-from datetime import date
+from datetime import date, datetime
 
 import pandas as pd
 
@@ -254,7 +254,60 @@ def get_choices(df=None):
         "genre": distinct("genre"),
         "rating": distinct("rating"),
         "country": distinct("country"),
+        "release_country": distinct("release_country"),
     }
+
+
+# ---------------------------------------------------------------------------
+# Search / filter / sort / paginate (used by the movie list page)
+# ---------------------------------------------------------------------------
+
+SORTABLE_COLUMNS = ["year", "score", "budget", "gross"]
+
+
+def search_movies(df, q="", genre="", rating="", year_min=None, year_max=None,
+                  sort="year", order="desc", page=1, per_page=20):
+    """Filter, sort and paginate the movie table.
+
+    Returns a dict with the rows of the requested page (as dicts) plus
+    the total number of matches and the number of pages.
+    """
+    result = df
+    if q:
+        text = q.strip().lower()
+        match = (
+            result["name"].str.lower().str.contains(text, regex=False, na=False)
+            | result["director"].str.lower().str.contains(text, regex=False, na=False)
+            | result["star"].str.lower().str.contains(text, regex=False, na=False)
+        )
+        result = result[match]
+    if genre:
+        result = result[result["genre"] == genre]
+    if rating:
+        result = result[result["rating"] == rating]
+    if year_min is not None:
+        result = result[result["year"] >= year_min]
+    if year_max is not None:
+        result = result[result["year"] <= year_max]
+
+    if sort not in SORTABLE_COLUMNS:
+        sort = "year"
+    ascending = order == "asc"
+    # Missing values always go to the end; "name" breaks ties for a stable order.
+    result = result.sort_values([sort, "name"], ascending=[ascending, True],
+                                na_position="last", kind="mergesort")
+
+    total = len(result)
+    pages = max(1, -(-total // per_page))  # ceiling division
+    page = min(max(1, page), pages)
+    start = (page - 1) * per_page
+    rows = result.iloc[start:start + per_page]
+
+    items = [
+        {key: (None if pd.isna(value) else value) for key, value in row.items()}
+        for row in rows.to_dict(orient="records")
+    ]
+    return {"items": items, "total": total, "page": page, "pages": pages}
 
 
 # ---------------------------------------------------------------------------
@@ -291,6 +344,17 @@ def _range_message(label, minimum, maximum):
     return f"{label}ต้องอยู่ระหว่าง {minimum:g} ถึง {maximum:g}"
 
 
+def is_valid_release_date(text):
+    """Accept a full ISO date, or the partial forms found in the dataset."""
+    for fmt in ("%Y-%m-%d", "%B %Y", "%Y"):
+        try:
+            datetime.strptime(text, fmt)
+            return True
+        except ValueError:
+            continue
+    return False
+
+
 def validate_movie(form):
     """Validate submitted form data.
 
@@ -310,11 +374,11 @@ def validate_movie(form):
         errors["genre"] = "กรุณาเลือกประเภทหนัง"
     record["rating"] = normalize_rating(record["rating"]) if record["rating"] else None
 
-    if record["release_date"] and len(record["release_date"]) == 10:
-        try:
-            date.fromisoformat(record["release_date"])
-        except ValueError:
-            errors["release_date"] = "รูปแบบวันฉายไม่ถูกต้อง (ใช้ ปี-เดือน-วัน เช่น 1980-06-13)"
+    if record["release_date"] and not is_valid_release_date(record["release_date"]):
+        errors["release_date"] = (
+            "รูปแบบวันฉายไม่ถูกต้อง ใช้ ปี-เดือน-วัน เช่น 1980-06-13 "
+            "(หรือ November 1980 / 1980 ถ้าไม่ทราบวันที่)"
+        )
 
     current_year = date.today().year
     record["year"] = _parse_number(form, "year", errors, "ปีที่ฉาย",

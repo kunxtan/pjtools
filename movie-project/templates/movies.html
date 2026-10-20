@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}รายการหนัง{% endblock %}
+
+{% macro sort_header(col, label) %}
+  {% set active = filters.sort == col %}
+  {% set next_order = 'asc' if active and filters.order == 'desc' else 'desc' %}
+  <th scope="col" class="col-num sortable{% if active %} is-sorted{% endif %}"
+      {% if active %}aria-sort="{{ 'ascending' if filters.order == 'asc' else 'descending' }}"{% endif %}>
+    <a href="{{ page_url(sort=col, order=next_order, page=None) }}">
+      {{ label }}
+      <span class="sort-icon" aria-hidden="true">{{ ('▲' if filters.order == 'asc' else '▼') if active else '↕' }}</span>
+      <span class="sr-only">(กดเพื่อเรียงลำดับ)</span>
+    </a>
+  </th>
+{% endmacro %}
+
+{% block content %}
+<section class="page-head">
+  <div class="marquee marquee--compact" data-marquee>
+    <p class="marquee__kicker">NOW SHOWING</p>
+    <h1 class="marquee__title">รายการหนัง</h1>
+    <p class="marquee__sub">ข้อมูลทั้งหมดอ่านจากไฟล์ Excel (data/movies.xlsx)</p>
+  </div>
+  <a class="btn btn--gold btn--lg" href="{{ url_for('movie_new', next=next_url) }}">
+    <span aria-hidden="true">➕</span> เพิ่มหนังใหม่
+  </a>
+</section>
+
+<section class="panel" aria-labelledby="filter-heading">
+  <h2 class="panel__title" id="filter-heading"><span aria-hidden="true">🔍</span> ค้นหาและกรองข้อมูล</h2>
+  <form class="filter-form" method="get" action="{{ url_for('movies') }}" role="search">
+    <div class="field field--wide">
+      <label for="q">ค้นหา</label>
+      <input type="search" id="q" name="q" value="{{ filters.q }}"
+             placeholder="ชื่อเรื่อง ผู้กำกับ หรือนักแสดง" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="year_min">ตั้งแต่ปี</label>
+      <input type="number" id="year_min" name="year_min" inputmode="numeric"
+             min="{{ year_bounds[0] }}" max="{{ year_bounds[1] }}"
+             value="{{ filters.year_min or '' }}" placeholder="{{ year_bounds[0] }}">
+    </div>
+    <div class="field">
+      <label for="year_max">ถึงปี</label>
+      <input type="number" id="year_max" name="year_max" inputmode="numeric"
+             min="{{ year_bounds[0] }}" max="{{ year_bounds[1] }}"
+             value="{{ filters.year_max or '' }}" placeholder="{{ year_bounds[1] }}">
+    </div>
+
+    <div class="field">
+      <label for="genre">ประเภท</label>
+      <select id="genre" name="genre">
+        <option value="">ทุกประเภท</option>
+        {% for genre in choices.genre %}
+        <option value="{{ genre }}" {% if filters.genre == genre %}selected{% endif %}>{{ genre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="rating">เรท</label>
+      <select id="rating" name="rating">
+        <option value="">ทุกเรท</option>
+        {% for rating in choices.rating %}
+        <option value="{{ rating }}" {% if filters.rating == rating %}selected{% endif %}>{{ rating }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="sort">เรียงตาม</label>
+      <select id="sort" name="sort">
+        {% for value, label in [('year', 'ปีที่ฉาย'), ('score', 'คะแนน'), ('budget', 'ทุนสร้าง'), ('gross', 'รายได้')] %}
+        <option value="{{ value }}" {% if filters.sort == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="order">ลำดับ</label>
+      <select id="order" name="order">
+        <option value="desc" {% if filters.order == 'desc' %}selected{% endif %}>มากไปน้อย</option>
+        <option value="asc" {% if filters.order == 'asc' %}selected{% endif %}>น้อยไปมาก</option>
+      </select>
+    </div>
+
+    <div class="filter-form__actions">
+      <button class="btn btn--gold" type="submit"><span aria-hidden="true">🔍</span> ค้นหา</button>
+      {% if has_filters %}
+      <a class="btn btn--ghost" href="{{ url_for('movies') }}">ล้างตัวกรอง</a>
+      {% endif %}
+    </div>
+  </form>
+</section>
+
+<section aria-labelledby="results-heading">
+  <div class="results-bar">
+    <h2 class="results-bar__count" id="results-heading">
+      พบ <strong class="stat-number">{{ result.total | number }}</strong> เรื่อง
+    </h2>
+    {% if result.total %}
+    <p class="results-bar__range">
+      แสดงเรื่องที่ {{ ((result.page - 1) * per_page + 1) | number }}–{{ ((result.page - 1) * per_page + result['items'] | length) | number }}
+      · หน้า {{ result.page }} จาก {{ result.pages | number }}
+    </p>
+    {% endif %}
+  </div>
+
+  {% if result['items'] %}
+  <div class="table-wrap">
+    <table class="movie-table">
+      <caption class="sr-only">
+        รายการหนัง {{ result.total | number }} เรื่อง หน้า {{ result.page }} จาก {{ result.pages }}
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">ชื่อเรื่อง</th>
+          {{ sort_header('year', 'ปี') }}
+          <th scope="col">ประเภท</th>
+          <th scope="col">เรท</th>
+          {{ sort_header('score', 'คะแนน') }}
+          {{ sort_header('budget', 'ทุนสร้าง') }}
+          {{ sort_header('gross', 'รายได้') }}
+          <th scope="col">ผู้กำกับ</th>
+          <th scope="col">นักแสดงนำ</th>
+          <th scope="col" class="col-actions">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for movie in result['items'] %}
+        <tr>
+          <th scope="row" class="cell-title" data-label="ชื่อเรื่อง">
+            <span class="movie-name">{{ movie.name }}</span>
+            <span class="movie-id">#{{ movie.id }}</span>
+          </th>
+          <td class="col-num" data-label="ปี">{{ movie.year | int if movie.year is not none else '—' }}</td>
+          <td data-label="ประเภท">
+            {% if movie.genre %}
+            <span class="genre-badge" style="--genre: {{ genre_color(movie.genre) }}">{{ movie.genre }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td data-label="เรท">{% if movie.rating %}<span class="rating-chip">{{ movie.rating }}</span>{% else %}—{% endif %}</td>
+          <td class="col-num" data-label="คะแนน">
+            {% if movie.score is not none %}<span aria-hidden="true">⭐</span> {{ movie.score | number(1) }}{% else %}—{% endif %}
+          </td>
+          <td class="col-num" data-label="ทุนสร้าง">{{ movie.budget | money }}</td>
+          <td class="col-num" data-label="รายได้">{{ movie.gross | money }}</td>
+          <td data-label="ผู้กำกับ">{{ movie.director | text }}</td>
+          <td data-label="นักแสดงนำ">{{ movie.star | text }}</td>
+          <td class="col-actions" data-label="จัดการ">
+            <div class="row-actions">
+              <a class="btn btn--small btn--ghost"
+                 href="{{ url_for('movie_edit', movie_id=movie.id, next=next_url) }}"
+                 aria-label="แก้ไข {{ movie.name }}">
+                <span aria-hidden="true">✏️</span> แก้ไข
+              </a>
+              <form method="post" action="{{ url_for('movie_delete', movie_id=movie.id) }}"
+                    data-confirm='ต้องการลบ "{{ movie.name }}" ({{ movie.year | int }}) ออกจากไฟล์ Excel ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้'>
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <button class="btn btn--small btn--danger" type="submit" aria-label="ลบ {{ movie.name }}">
+                  <span aria-hidden="true">🗑️</span> ลบ
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if result.pages > 1 %}
+  {% set p = result.page %}
+  {% set first = [1, p - 2] | max %}
+  {% set last = [result.pages, p + 2] | min %}
+  <nav class="pagination" aria-label="แบ่งหน้า">
+    <ul>
+      <li>
+        {% if p > 1 %}
+        <a class="page-link" href="{{ page_url(page=p - 1) }}" rel="prev"><span aria-hidden="true">◀</span> ก่อนหน้า</a>
+        {% else %}
+        <span class="page-link is-disabled" aria-disabled="true"><span aria-hidden="true">◀</span> ก่อนหน้า</span>
+        {% endif %}
+      </li>
+      {% if first > 1 %}
+      <li><a class="page-link" href="{{ page_url(page=1) }}" aria-label="หน้า 1">1</a></li>
+      {% if first > 2 %}<li><span class="page-gap" aria-hidden="true">…</span></li>{% endif %}
+      {% endif %}
+      {% for n in range(first, last + 1) %}
+      <li>
+        {% if n == p %}
+        <span class="page-link is-current" aria-current="page">{{ n }}</span>
+        {% else %}
+        <a class="page-link" href="{{ page_url(page=n) }}" aria-label="หน้า {{ n }}">{{ n }}</a>
+        {% endif %}
+      </li>
+      {% endfor %}
+      {% if last < result.pages %}
+      {% if last < result.pages - 1 %}<li><span class="page-gap" aria-hidden="true">…</span></li>{% endif %}
+      <li><a class="page-link" href="{{ page_url(page=result.pages) }}" aria-label="หน้า {{ result.pages }}">{{ result.pages }}</a></li>
+      {% endif %}
+      <li>
+        {% if p < result.pages %}
+        <a class="page-link" href="{{ page_url(page=p + 1) }}" rel="next">ถัดไป <span aria-hidden="true">▶</span></a>
+        {% else %}
+        <span class="page-link is-disabled" aria-disabled="true">ถัดไป <span aria-hidden="true">▶</span></span>
+        {% endif %}
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <p class="empty-state__icon" aria-hidden="true">🍿</p>
+    <p class="empty-state__title">ไม่พบหนังที่ตรงกับเงื่อนไข</p>
+    <p>ลองเปลี่ยนคำค้นหาหรือช่วงปี แล้วค้นหาอีกครั้ง</p>
+    <a class="btn btn--ghost" href="{{ url_for('movies') }}">ดูหนังทั้งหมด</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

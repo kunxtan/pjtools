@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site_name }}{% endblock %} · {{ site_name }}</title>
+  <meta name="description" content="{{ site_name }} — {{ site_tagline }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <a class="skip-link" href="#main">ข้ามไปยังเนื้อหาหลัก</a>
+
+  {# Decorative velvet curtains on both sides (wide screens only) #}
+  <div class="curtain curtain--left" aria-hidden="true"></div>
+  <div class="curtain curtain--right" aria-hidden="true"></div>
+
+  <div class="valance" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <nav class="navbar" aria-label="เมนูหลัก">
+      <a class="brand" href="{{ url_for('root') }}">
+        <span class="brand__icon" aria-hidden="true">🎬</span>
+        <span class="brand__name">{{ site_name }}</span>
+      </a>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">
+        <span aria-hidden="true">☰</span>
+        <span class="sr-only">เมนู</span>
+      </button>
+
+      <ul class="nav-menu" id="nav-menu">
+        {% for item in nav_items() %}
+        <li>
+          <a class="nav-link{% if item.active %} is-active{% endif %}" href="{{ item.url }}"
+             {% if item.active %}aria-current="page"{% endif %}>
+            <span aria-hidden="true">{{ item.icon }}</span> {{ item.label }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+
+      <button class="sound-toggle" id="sound-toggle" type="button" aria-pressed="false"
+              title="เปิด/ปิดเสียงประกอบ" data-no-click-sound>
+        <span class="sound-toggle__icon" aria-hidden="true">🔇</span>
+        <span class="sr-only">เสียงประกอบ</span>
+      </button>
+    </nav>
+  </header>
+
+  {# Flash messages are printed as movie tickets #}
+  <div class="flash-stack" id="flash-stack">
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+    <div class="ticket ticket--{{ category }}" data-flash
+         {% if category == 'success' %}data-sound="clapper"{% endif %}>
+      <div class="ticket__stub" aria-hidden="true">
+        <span class="ticket__emoji">{{ '🎟️' if category == 'success' else '⚠️' }}</span>
+        <span class="ticket__admit">{{ 'ADMIT ONE' if category == 'success' else 'NO ENTRY' }}</span>
+      </div>
+      <div class="ticket__body">
+        <p class="ticket__title">{{ 'เรียบร้อย!' if category == 'success' else 'เกิดข้อผิดพลาด' }}</p>
+        <p class="ticket__message">{{ message }}</p>
+      </div>
+      <button class="ticket__close" type="button" aria-label="ปิดข้อความ">✕</button>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Screen-reader announcements (save results, simulator results, sound state) #}
+  <div class="sr-only" id="live-region" role="status" aria-live="polite"></div>
+
+  <main class="site-main" id="main" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="filmstrip">
+      <div class="filmstrip__frames">
+        <section class="filmstrip__frame">
+          <h2 class="footer-heading">กลุ่ม</h2>
+          <p class="footer-group">{{ group_name }}</p>
+          <p class="footer-muted">{{ site_name }} — {{ site_tagline }}</p>
+        </section>
+        <section class="filmstrip__frame">
+          <h2 class="footer-heading">สมาชิก</h2>
+          <ul class="footer-members">
+            {% for member in members %}<li>{{ member }}</li>{% endfor %}
+          </ul>
+        </section>
+        <section class="filmstrip__frame">
+          <h2 class="footer-heading">แหล่งที่มาของข้อมูล</h2>
+          <p>{{ data_source }}</p>
+          <p class="footer-muted">โปรเจกต์วิชา Data Tools · ปัจจัยที่ส่งผลต่อความสำเร็จของภาพยนตร์ ปี 1980–2020</p>
+        </section>
+      </div>
+    </div>
+  </footer>
+
+  {# Delete confirmation dialog, shared by every page #}
+  <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+    <form method="dialog" class="ticket ticket--danger confirm-dialog__ticket">
+      <div class="ticket__stub" aria-hidden="true">
+        <span class="ticket__emoji">🗑️</span>
+        <span class="ticket__admit">VOID</span>
+      </div>
+      <div class="ticket__body">
+        <h2 class="ticket__title" id="confirm-title">ยืนยันการลบ</h2>
+        <p class="ticket__message" id="confirm-message">ต้องการลบรายการนี้ใช่หรือไม่?</p>
+        <div class="confirm-dialog__actions">
+          <button class="btn btn--ghost" type="submit" value="cancel" autofocus>ยกเลิก</button>
+          <button class="btn btn--danger" type="submit" value="confirm">ลบเลย</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    window.CINESCOPE = { genreColors: {{ genre_colors | tojson }} };
+  </script>
+  <script src="{{ url_for('static', filename='js/audio.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

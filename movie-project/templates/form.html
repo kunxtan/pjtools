@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% set page_title = 'แก้ไขข้อมูลหนัง' if is_edit else 'เพิ่มหนังใหม่' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{#
+  One form field. `rules` become data-* attributes read by main.js for
+  client-side validation; the same rules are checked again on the server.
+#}
+{% macro field(name, label, type="text", required=false, hint="", options=none, wide=false, attrs={}) %}
+  {% set error = errors.get(name) %}
+  {% set value = values.get(name, '') %}
+  {% set described = ('hint-' ~ name ~ ' ' if hint else '') ~ 'err-' ~ name %}
+  <div class="field{% if wide %} field--wide{% endif %}{% if error %} has-error{% endif %}">
+    <label for="f-{{ name }}">
+      {{ label }}
+      {% if required %}<span class="req" aria-hidden="true">*</span><span class="sr-only">(จำเป็นต้องกรอก)</span>{% endif %}
+    </label>
+    {% if options is not none %}
+    <select id="f-{{ name }}" name="{{ name }}" data-label="{{ label }}"
+            {% if required %}required data-required{% endif %}
+            aria-describedby="{{ described }}" {% if error %}aria-invalid="true"{% endif %}>
+      <option value="">— เลือก{{ label }} —</option>
+      {% for option in options %}
+      <option value="{{ option }}" {% if value == option %}selected{% endif %}>{{ option }}</option>
+      {% endfor %}
+      {% if value and value not in options %}
+      <option value="{{ value }}" selected>{{ value }}</option>
+      {% endif %}
+    </select>
+    {% else %}
+    <input id="f-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"
+           data-label="{{ label }}" {% if required %}required data-required{% endif %}
+           aria-describedby="{{ described }}" {% if error %}aria-invalid="true"{% endif %}
+           {{ attrs | xmlattr }}>
+    {% endif %}
+    {% if hint %}<p class="field-hint" id="hint-{{ name }}">{{ hint }}</p>{% endif %}
+    <p class="field-error" id="err-{{ name }}" {% if not error %}hidden{% endif %}>
+      <span aria-hidden="true">⚠</span> <span class="field-error__text">{{ error or '' }}</span>
+    </p>
+  </div>
+{% endmacro %}
+
+{% block content %}
+<section class="form-head">
+  <div class="clapper" id="clapper">
+    <div class="clapper__stick" aria-hidden="true"></div>
+    <div class="clapper__hinge" aria-hidden="true"></div>
+    <div class="clapper__board">
+      <div class="clapper__row">
+        <span class="clapper__label">PROD.</span>
+        <span class="clapper__value">{{ site_name }}</span>
+      </div>
+      <div class="clapper__row clapper__row--scene">
+        <span class="clapper__label">SCENE</span>
+        <h1 class="clapper__value clapper__title">{{ page_title }}</h1>
+      </div>
+      <div class="clapper__row clapper__row--split">
+        <div>
+          <span class="clapper__label">TAKE</span>
+          <span class="clapper__value">{{ '#' ~ movie_id if is_edit else 'NEW' }}</span>
+        </div>
+        <div>
+          <span class="clapper__label">FILE</span>
+          <span class="clapper__value">movies.xlsx</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="form-head__note">
+    กรอกข้อมูลแล้วกด “บันทึกลง Excel” ระบบจะเขียนข้อมูลลงไฟล์ <code>data/movies.xlsx</code> ทันที
+    ช่องที่มีเครื่องหมาย <span class="req" aria-hidden="true">*</span><span class="sr-only">ดอกจัน</span> จำเป็นต้องกรอก
+  </p>
+</section>
+
+<div class="error-summary" id="error-summary" role="alert" tabindex="-1" {% if not errors %}hidden{% endif %}>
+  <p class="error-summary__title"><span aria-hidden="true">🎞️</span> ยังบันทึกไม่ได้ กรุณาแก้ไขข้อมูล <span id="error-count">{{ errors | length }}</span> ช่อง</p>
+  <ul id="error-list">
+    {% for name, message in errors.items() %}
+    <li><a href="#f-{{ name }}">{{ message }}</a></li>
+    {% endfor %}
+  </ul>
+</div>
+
+<form class="movie-form panel" id="movie-form" method="post" novalidate data-validate
+      action="{{ url_for('movie_edit', movie_id=movie_id) if is_edit else url_for('movie_new') }}">
+  <input type="hidden" name="next" value="{{ next_url }}">
+
+  <fieldset class="form-section">
+    <legend><span aria-hidden="true">🎬</span> ข้อมูลหลัก</legend>
+    <div class="form-grid">
+      {{ field('name', 'ชื่อเรื่อง', required=true, wide=true, attrs={'maxlength': 200, 'autocomplete': 'off'}) }}
+      {{ field('genre', 'ประเภทหนัง', required=true, options=choices.genre) }}
+      {{ field('rating', 'เรท', options=choices.rating, hint='"Unrated" จะถูกรวมเป็น "Not Rated"') }}
+      {{ field('year', 'ปีที่ฉาย', type='number', required=true,
+               hint='ระหว่าง 1900 ถึง ' ~ current_year,
+               attrs={'min': 1900, 'max': current_year, 'step': 1, 'inputmode': 'numeric',
+                      'data-min': 1900, 'data-max': current_year, 'data-integer': ''}) }}
+      {{ field('runtime', 'ความยาว (นาที)', type='number', hint='ระหว่าง 1 ถึง 600 นาที',
+               attrs={'min': 1, 'max': 600, 'step': 'any', 'inputmode': 'decimal',
+                      'data-min': 1, 'data-max': 600}) }}
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend><span aria-hidden="true">🎟️</span> การฉายและการผลิต</legend>
+    <div class="form-grid">
+      {{ field('release_date', 'วันที่ฉาย',
+               hint='รูปแบบ ปี-เดือน-วัน เช่น 1980-06-13 (ถ้าไม่ทราบวัน ใส่ November 1980 หรือ 1980 ได้)',
+               attrs={'placeholder': 'YYYY-MM-DD', 'autocomplete': 'off', 'data-release-date': ''}) }}
+      {{ field('release_country', 'ประเทศที่ฉาย', options=choices.release_country) }}
+      {{ field('country', 'ประเทศผู้สร้าง', options=choices.country) }}
+      {{ field('company', 'บริษัทผู้สร้าง', attrs={'maxlength': 200}) }}
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend><span aria-hidden="true">🎭</span> ทีมงานและนักแสดง</legend>
+    <div class="form-grid">
+      {{ field('director', 'ผู้กำกับ', attrs={'maxlength': 200}) }}
+      {{ field('writer', 'ผู้เขียนบท', attrs={'maxlength': 200}) }}
+      {{ field('star', 'นักแสดงนำ', attrs={'maxlength': 200}) }}
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend><span aria-hidden="true">💰</span> คะแนนและตัวเลขบ็อกซ์ออฟฟิศ</legend>
+    <div class="form-grid">
+      {{ field('score', 'คะแนน IMDb', type='number', hint='ระหว่าง 0 ถึง 10',
+               attrs={'min': 0, 'max': 10, 'step': 0.1, 'inputmode': 'decimal',
+                      'data-min': 0, 'data-max': 10}) }}
+      {{ field('votes', 'จำนวนโหวต', type='number', hint='จำนวนเต็ม ไม่ติดลบ',
+               attrs={'min': 0, 'step': 1, 'inputmode': 'numeric', 'data-min': 0, 'data-integer': ''}) }}
+      {{ field('budget', 'ทุนสร้าง (USD)', type='number', hint='ไม่ติดลบ เช่น 19000000',
+               attrs={'min': 0, 'step': 'any', 'inputmode': 'decimal', 'data-min': 0, 'data-money': ''}) }}
+      {{ field('gross', 'รายได้ (USD)', type='number', hint='ไม่ติดลบ เช่น 46998772',
+               attrs={'min': 0, 'step': 'any', 'inputmode': 'decimal', 'data-min': 0, 'data-money': ''}) }}
+    </div>
+  </fieldset>
+
+  <div class="form-actions">
+    <button class="btn btn--gold btn--lg" type="submit" id="save-button">
+      <span aria-hidden="true">🎬</span> บันทึกลง Excel
+    </button>
+    <a class="btn btn--ghost btn--lg" href="{{ next_url }}">ยกเลิก</a>
+  </div>
+</form>
+
+{% if is_edit %}
+<section class="danger-zone panel" aria-labelledby="danger-heading">
+  <h2 class="panel__title" id="danger-heading"><span aria-hidden="true">🗑️</span> ลบหนังเรื่องนี้</h2>
+  <p>การลบจะนำแถวนี้ออกจากไฟล์ Excel ถาวร และไม่สามารถย้อนกลับได้</p>
+  <form method="post" action="{{ url_for('movie_delete', movie_id=movie_id) }}"
+        data-confirm='ต้องการลบ "{{ values.get('name', '') }}" ออกจากไฟล์ Excel ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้'>
+    <input type="hidden" name="next" value="{{ next_url }}">
+    <button class="btn btn--danger" type="submit"><span aria-hidden="true">🗑️</span> ลบหนังเรื่องนี้</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}
