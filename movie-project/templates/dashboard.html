@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% set charts = [
+  ('📈', 'จำนวนหนังและรายได้ตามปี', 'กราฟเส้นแสดงจำนวนหนังและรายได้รวมในแต่ละปี ใช้ดูแนวโน้มของอุตสาหกรรมตลอด 40 ปี (ข้อควรรู้: ชุดข้อมูลเก็บหนังประมาณปีละ 200 เรื่อง จำนวนหนังจึงค่อนข้างคงที่)', highlights.year),
+  ('📊', 'รายได้เฉลี่ยตามประเภท', 'กราฟแท่งเปรียบเทียบรายได้เฉลี่ยต่อเรื่องของแต่ละประเภทหนัง ใช้สีประจำประเภทเดียวกับทุกหน้าในเว็บ', highlights.genre),
+  ('🔵', 'ทุนสร้างเทียบรายได้', 'กราฟกระจาย (scatter plot) หนึ่งจุดคือหนังหนึ่งเรื่อง จุดที่เรียงขึ้นไปทางขวาบนแสดงว่ายิ่งทุนสูง รายได้มักสูงตาม', highlights.scatter),
+  ('🗺️', 'แผนที่จำนวนหนังตามประเทศ', 'แผนที่โลกที่ระบายสีตามจำนวนหนังของประเทศผู้สร้าง สีเข้มคือประเทศที่สร้างหนังมาก', highlights.country),
+  ('🏢', 'Top 10 บริษัท', 'กราฟแท่งแนวนอนของ 10 บริษัทที่ทำรายได้รวมสูงสุด แสดงว่ารายได้กระจุกตัวอยู่กับสตูดิโอใหญ่ไม่กี่แห่ง', highlights.company),
+] %}
+
+{% block content %}
+<section class="page-head">
+  <div class="marquee marquee--compact" data-marquee>
+    <p class="marquee__kicker">TABLEAU PUBLIC</p>
+    <h1 class="marquee__title">Dashboard</h1>
+    <p class="marquee__sub">ภาพรวมอุตสาหกรรมภาพยนตร์ ปี 1980–2020 จาก Tableau</p>
+  </div>
+</section>
+
+{% if embed_url %}
+<section class="panel tableau-panel" aria-labelledby="tableau-title">
+  <h2 class="sr-only" id="tableau-title">Tableau Dashboard</h2>
+  <div class="tableau-frame">
+    <iframe src="{{ embed_url }}"
+            title="Tableau Dashboard: จำนวนหนังและรายได้ตามปี รายได้เฉลี่ยตามประเภท ทุนสร้างเทียบรายได้ แผนที่จำนวนหนังตามประเทศ และ Top 10 บริษัท"
+            loading="lazy" allowfullscreen></iframe>
+  </div>
+  <p class="tableau-panel__links">
+    <a href="{{ tableau_url }}" target="_blank" rel="noopener">
+      <span aria-hidden="true">↗</span> เปิด Dashboard ใน Tableau Public (แท็บใหม่)
+    </a>
+    <span class="footer-muted">· ต้องเชื่อมต่ออินเทอร์เน็ต · คำอธิบายแต่ละกราฟอยู่ด้านล่าง</span>
+  </p>
+</section>
+{% else %}
+<section class="panel setup-box" aria-labelledby="setup-title">
+  <h2 class="panel__title" id="setup-title"><span aria-hidden="true">🛠️</span> ยังไม่ได้ใส่ลิงก์ Tableau</h2>
+  <p>หน้านี้จะแสดง Dashboard จาก Tableau Public เมื่อใส่ลิงก์แล้ว ทำตามขั้นตอนนี้:</p>
+  <ol class="setup-box__steps">
+    <li>เปิดไฟล์ <code>.twbx</code> ใน Tableau แล้วเลือก <strong>File → Save to Tableau Public</strong></li>
+    <li>เปิด Dashboard บนเว็บ Tableau Public แล้วกดปุ่ม <strong>Share</strong> คัดลอกลิงก์</li>
+    <li>เปิดไฟล์ <code>app.py</code> แล้ววางลิงก์ในตัวแปร <code>TABLEAU_URL</code> เช่น
+      <pre class="setup-box__code"><code>TABLEAU_URL = "https://public.tableau.com/views/MovieIndustry/Dashboard"</code></pre>
+    </li>
+    <li>รัน <code>python app.py</code> ใหม่ แล้วรีเฟรชหน้านี้</li>
+  </ol>
+  <p class="footer-muted">ใช้ได้ทั้งลิงก์แบบ <code>/views/…</code> และ <code>/app/profile/…/viz/…</code> ระบบจะแปลงเป็นลิงก์สำหรับฝังให้เอง</p>
+</section>
+{% endif %}
+
+<section aria-labelledby="charts-title">
+  <h2 class="section-title" id="charts-title"><span aria-hidden="true">🎞️</span> กราฟใน Dashboard</h2>
+  <ol class="chart-notes">
+    {% for icon, title, description, highlight in charts %}
+    <li class="chart-note">
+      <span class="chart-note__icon" aria-hidden="true">{{ icon }}</span>
+      <div>
+        <h3 class="chart-note__title">{{ title }}</h3>
+        <p>{{ description }}</p>
+        {% if highlight %}<p class="chart-note__highlight"><span aria-hidden="true">💡</span> {{ highlight }} <span class="footer-muted">(จากข้อมูลปัจจุบันในเว็บ)</span></p>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}

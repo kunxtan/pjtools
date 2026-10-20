@@ -41,6 +41,12 @@ function initNavToggle() {
    Marquee signs: place light bulbs evenly around the border
    ------------------------------------------------------------------------- */
 function buildMarqueeBulbs(sign) {
+  // Rebuild only when the size really changed (ResizeObserver also fires once
+  // on start, which would otherwise restart the light-up sequence).
+  const size = `${sign.clientWidth}x${sign.clientHeight}`;
+  if (sign.dataset.bulbSize === size) return;
+  sign.dataset.bulbSize = size;
+
   let ring = sign.querySelector(".marquee__bulbs");
   if (!ring) {
     ring = document.createElement("div");
@@ -77,9 +83,23 @@ function buildMarqueeBulbs(sign) {
   ring.appendChild(fragment);
 }
 
+/* Signs with data-light-sequence switch their bulbs on one by one at page
+   load, hold steady, then all start the chase together (so it stays in sync). */
+function lightBulbsInSequence(sign) {
+  const bulbs = Array.from(sign.querySelectorAll(".bulb"));
+  if (prefersReducedMotion() || !bulbs.length) return;
+  const step = Math.min(30, 1800 / bulbs.length);
+  sign.classList.add("is-lighting");
+  bulbs.forEach((bulb, index) => {
+    window.setTimeout(() => bulb.classList.add("is-on"), index * step);
+  });
+  window.setTimeout(() => sign.classList.remove("is-lighting"), bulbs.length * step + 500);
+}
+
 function initMarquees() {
   const signs = document.querySelectorAll("[data-marquee]");
   signs.forEach((sign) => buildMarqueeBulbs(sign));
+  document.querySelectorAll("[data-light-sequence]").forEach(lightBulbsInSequence);
 
   if ("ResizeObserver" in window) {
     const observer = new ResizeObserver((entries) => {
@@ -155,7 +175,10 @@ function initConfirmDialogs() {
 
     const message = form.getAttribute("data-confirm");
     if (!dialog || typeof dialog.showModal !== "function") {
-      if (window.confirm(message)) form.submit();
+      if (window.confirm(message)) {
+        markUserAction();
+        form.submit();
+      }
       return;
     }
     pendingForm = form;
@@ -168,6 +191,7 @@ function initConfirmDialogs() {
   if (!dialog) return;
   dialog.addEventListener("close", () => {
     if (dialog.returnValue === "confirm" && pendingForm) {
+      markUserAction();
       pendingForm.submit(); // submit() skips the submit event, so no loop
     } else if (returnFocusTo) {
       returnFocusTo.focus();
@@ -304,6 +328,7 @@ function initFormValidation() {
 
       // Valid: close the clapperboard, then send the form.
       submitting = true;
+      markUserAction();
       const button = form.querySelector('[type="submit"]');
       if (button) button.disabled = true;
       const clapper = document.getElementById("clapper");
@@ -320,9 +345,63 @@ function initFormValidation() {
   if (summary && !summary.hidden) summary.focus();
 }
 
+/* ---------------------------------------------------------------------------
+   Counters that run up like a cash counter: <span data-count-to="7669"
+   data-format="number|money|decimal|year">. The server already printed the
+   final value, so without JavaScript (or with reduced motion) it simply stays.
+   ------------------------------------------------------------------------- */
+function formatCounter(value, format) {
+  if (format === "money") {
+    const amount = Math.abs(value);
+    if (amount >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
+    if (amount >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
+    if (amount >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
+    return `$${value.toFixed(0)}`;
+  }
+  if (format === "decimal") return value.toFixed(2);
+  if (format === "year") return String(Math.round(value));
+  return Math.round(value).toLocaleString("en-US");
+}
+
+function initCounters() {
+  const counters = document.querySelectorAll("[data-count-to]");
+  if (!counters.length || prefersReducedMotion()) return;
+
+  const duration = 1800;
+  const start = performance.now();
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+  const items = Array.from(counters).map((el) => ({
+    el,
+    from: Number(el.dataset.countFrom || 0),
+    to: Number(el.dataset.countTo),
+    format: el.dataset.format,
+    final: el.textContent,
+  }));
+  // Screen readers get the final value straight away.
+  items.forEach((item) => item.el.setAttribute("aria-label", item.final.trim()));
+
+  const tick = (now) => {
+    const t = Math.min(1, (now - start) / duration);
+    items.forEach((item) => {
+      item.el.textContent = t < 1
+        ? formatCounter(item.from + (item.to - item.from) * easeOut(t), item.format)
+        : item.final;
+    });
+    if (t < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/* Remember that the user pressed save/delete, so the next page may play its
+   confirmation sound (see CineAudio.markUserAction). */
+function markUserAction() {
+  if (typeof CineAudio !== "undefined") CineAudio.markUserAction();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initNavToggle();
   initMarquees();
+  initCounters();
   initSound();
   initFlashMessages();
   initConfirmDialogs();

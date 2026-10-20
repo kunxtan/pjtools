@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}หน้าแรก{% endblock %}
+
+{# Emoji "poster art" per genre for the movie of the day #}
+{% set genre_icons = {
+  'Action': '💥', 'Adventure': '🗺️', 'Animation': '🎨', 'Biography': '📜', 'Comedy': '😂',
+  'Crime': '🕵️', 'Drama': '🎭', 'Family': '👨‍👩‍👧', 'Fantasy': '🐉', 'Horror': '👻',
+  'Mystery': '🔍', 'Romance': '💘', 'Sci-Fi': '🚀', 'Thriller': '🔪', 'Western': '🤠',
+  'Music': '🎵', 'Musical': '🎤', 'History': '🏛️', 'Sport': '🏆'
+} %}
+
+{% block content %}
+{# ---------------------------------------------------------------- Hero #}
+<section class="hero" aria-labelledby="hero-title">
+  <div class="marquee marquee--hero" data-marquee data-light-sequence>
+    <p class="marquee__kicker">NOW SHOWING</p>
+    <h1 class="hero__title" id="hero-title">{{ site_name }}</h1>
+    <p class="hero__tagline">{{ site_tagline }}</p>
+    <p class="hero__topic">ปัจจัยที่ส่งผลต่อความสำเร็จของภาพยนตร์ ปี 1980–2020 · วัดจากรายได้และคะแนนผู้ชม</p>
+  </div>
+</section>
+
+{# ------------------------------------------------------------ Counters #}
+<section class="home-stats" aria-label="ตัวเลขสรุปจากไฟล์ Excel ปัจจุบัน">
+  <div class="counter-tile">
+    <p class="counter-tile__label">หนังทั้งหมด</p>
+    <p class="counter" data-count-to="{{ summary.movies }}" data-format="number">{{ summary.movies | number }}</p>
+    <p class="counter-tile__unit">เรื่อง</p>
+  </div>
+  <div class="counter-tile">
+    <p class="counter-tile__label">ช่วงปีของข้อมูล</p>
+    <p class="counter">
+      <span data-count-to="{{ summary.year_min }}" data-count-from="{{ summary.year_min - 40 }}" data-format="year">{{ summary.year_min }}</span>–<span data-count-to="{{ summary.year_max }}" data-count-from="{{ summary.year_max - 40 }}" data-format="year">{{ summary.year_max }}</span>
+    </p>
+    <p class="counter-tile__unit">{{ summary.year_max - summary.year_min + 1 }} ปี</p>
+  </div>
+  <div class="counter-tile">
+    <p class="counter-tile__label">รายได้รวม</p>
+    <p class="counter" data-count-to="{{ summary.total_gross }}" data-format="money">{{ summary.total_gross | money }}</p>
+    <p class="counter-tile__unit">USD จากบ็อกซ์ออฟฟิศ</p>
+  </div>
+  <div class="counter-tile">
+    <p class="counter-tile__label">คะแนนเฉลี่ย</p>
+    <p class="counter" data-count-to="{{ summary.mean_score or 0 }}" data-format="decimal">{{ summary.mean_score | number(2) }}</p>
+    <p class="counter-tile__unit">จาก 10 (IMDb)</p>
+  </div>
+</section>
+
+{# ------------------------------------------------------- Key findings #}
+<section class="home-section" aria-labelledby="findings-title">
+  <h2 class="section-title" id="findings-title"><span aria-hidden="true">🎟️</span> ข้อค้นพบสำคัญ</h2>
+  <div class="finding-grid">
+    <article class="ticket finding">
+      <div class="ticket__stub" aria-hidden="true"><span class="ticket__emoji">💰</span><span class="ticket__admit">FINDING 1</span></div>
+      <div class="ticket__body">
+        <h3 class="finding__question">ทุนสร้างกับรายได้สัมพันธ์กันแค่ไหน?</h3>
+        <p class="finding__value"><span class="finding__var">r</span> = {{ findings.budget_gross_r | number(2) }}</p>
+        <p class="finding__text">{{ findings.budget_gross_text }}</p>
+      </div>
+    </article>
+    <article class="ticket finding">
+      <div class="ticket__stub" aria-hidden="true"><span class="ticket__emoji">⭐</span><span class="ticket__admit">FINDING 2</span></div>
+      <div class="ticket__body">
+        <h3 class="finding__question">ทุนสร้างกับคะแนนสัมพันธ์กันแค่ไหน?</h3>
+        <p class="finding__value"><span class="finding__var">r</span> = {{ findings.budget_score_r | number(2) }}</p>
+        <p class="finding__text">{{ findings.budget_score_text }}</p>
+      </div>
+    </article>
+    <article class="ticket finding">
+      <div class="ticket__stub" aria-hidden="true"><span class="ticket__emoji">🏆</span><span class="ticket__admit">FINDING 3</span></div>
+      <div class="ticket__body">
+        <h3 class="finding__question">ประเภทไหนรายได้มัธยฐานสูงสุด?</h3>
+        {% if findings.top_genre %}
+        <p class="finding__value">
+          <span class="genre-badge genre-badge--lg" style="--genre: {{ genre_color(findings.top_genre.label) }}">{{ findings.top_genre.label }}</span>
+        </p>
+        {% endif %}
+        <p class="finding__text">{{ findings.top_genre_text }}</p>
+      </div>
+    </article>
+  </div>
+  <p class="topic__note"><span aria-hidden="true">ℹ️</span> ตัวเลขทั้งหมดคำนวณใหม่จากไฟล์ <code>data/movies.xlsx</code> ทุกครั้งที่เปิดหน้า</p>
+</section>
+
+{# ----------------------------------------------------------- Shortcuts #}
+<nav class="home-section" aria-labelledby="shortcuts-title">
+  <h2 class="section-title" id="shortcuts-title"><span aria-hidden="true">🎬</span> เลือกโรงที่จะเข้าชม</h2>
+  <ul class="shortcut-grid">
+    <li><a class="shortcut" href="{{ url_for('movies') }}">
+      <span class="shortcut__icon" aria-hidden="true">🎞️</span>
+      <span class="shortcut__title">รายการหนัง</span>
+      <span class="shortcut__desc">ค้นหา กรอง เพิ่ม แก้ไข และลบข้อมูลลงไฟล์ Excel</span>
+    </a></li>
+    <li><a class="shortcut" href="{{ url_for('analysis') }}">
+      <span class="shortcut__icon" aria-hidden="true">📊</span>
+      <span class="shortcut__title">วิเคราะห์ข้อมูล</span>
+      <span class="shortcut__desc">สถิติ กราฟ correlation และ regression ตามคำถามวิจัย 6 ข้อ</span>
+    </a></li>
+    <li><a class="shortcut" href="{{ url_for('simulator') }}">
+      <span class="shortcut__icon" aria-hidden="true">🎬</span>
+      <span class="shortcut__title">Box Office Simulator</span>
+      <span class="shortcut__desc">สร้างหนังสมมติ แล้วดูว่าจะเป็น Blockbuster หรือ Flop</span>
+    </a></li>
+    <li><a class="shortcut" href="{{ url_for('dashboard') }}">
+      <span class="shortcut__icon" aria-hidden="true">🗺️</span>
+      <span class="shortcut__title">Dashboard</span>
+      <span class="shortcut__desc">Dashboard จาก Tableau Public</span>
+    </a></li>
+  </ul>
+</nav>
+
+{# ------------------------------------------------------ Movie of the day #}
+<section class="home-section" aria-labelledby="featured-title">
+  <h2 class="section-title" id="featured-title"><span aria-hidden="true">🌟</span> หนังเด่นประจำวัน</h2>
+  {% if featured %}
+  {% set f = featured %}
+  <div class="featured panel">
+    <div class="poster" style="--genre: {{ genre_color(f.genre) }}" aria-hidden="true">
+      <p class="poster__presents">{{ site_name }} PRESENTS</p>
+      <p class="poster__art">{{ genre_icons.get(f.genre, '🎬') }}</p>
+      <p class="poster__title">{{ f.name }}</p>
+      <p class="poster__stars">★ {{ f.score | number(1) }}</p>
+      <p class="poster__credits">
+        {% if f.director %}DIRECTED BY {{ f.director | upper }}{% endif %}
+        {% if f.star %}<br>STARRING {{ f.star | upper }}{% endif %}
+      </p>
+      <p class="poster__year">{{ f.year | int }}</p>
+    </div>
+    <div class="featured__info">
+      <p class="featured__kicker">สุ่มจากหนังที่ได้คะแนน {{ featured_min_score }} ขึ้นไป · เปลี่ยนทุกวัน</p>
+      <h3 class="featured__title">{{ f.name }} <span class="featured__year">({{ f.year | int }})</span></h3>
+      <p class="featured__tags">
+        <span class="genre-badge" style="--genre: {{ genre_color(f.genre) }}">{{ f.genre }}</span>
+        {% if f.rating %}<span class="rating-chip">{{ f.rating }}</span>{% endif %}
+      </p>
+      <dl class="featured__facts">
+        <div><dt>คะแนน IMDb</dt><dd>⭐ {{ f.score | number(1) }} / 10</dd></div>
+        <div><dt>ผู้กำกับ</dt><dd>{{ f.director | text }}</dd></div>
+        <div><dt>นักแสดงนำ</dt><dd>{{ f.star | text }}</dd></div>
+        <div><dt>ความยาว</dt><dd>{% if f.runtime %}{{ f.runtime | number }} นาที{% else %}—{% endif %}</dd></div>
+        <div><dt>ทุนสร้าง</dt><dd>{{ f.budget | money }}</dd></div>
+        <div><dt>รายได้</dt><dd>{{ f.gross | money }}</dd></div>
+      </dl>
+      <a class="btn btn--ghost" href="{{ url_for('movies', q=f.name) }}">ดูในรายการหนัง</a>
+    </div>
+  </div>
+  {% else %}
+  <p class="empty-state">ยังไม่มีหนังที่ได้คะแนน {{ featured_min_score }} ขึ้นไปในข้อมูล</p>
+  {% endif %}
+</section>
+{% endblock %}

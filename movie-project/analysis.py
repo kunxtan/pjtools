@@ -9,6 +9,7 @@ always matches the current Excel data.
 """
 
 import math
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -453,15 +454,246 @@ def data_limitations(df):
 
 
 def key_findings(df):
-    """Three headline numbers (used on the home page)."""
+    """Three headline findings for the home page, computed from the current data."""
     # Pairwise rows, same as correlation_matrix(), so the numbers always agree.
-    budget_gross, _ = pearson_r(df["budget"], df["gross"])
-    budget_score, _ = pearson_r(df["budget"], df["score"])
+    budget_gross, n_gross = pearson_r(df["budget"], df["gross"])
+    budget_score, n_score = pearson_r(df["budget"], df["score"])
     gross_rows, _ = genre_metric(df, "gross", "median")
+    top_genre = gross_rows[0] if gross_rows else None
     return {
         "budget_gross_r": budget_gross,
+        "budget_gross_text": (
+            f"ทุนสร้างกับรายได้{strength_word(budget_gross)} หนังที่ลงทุนมากมักทำรายได้มากตาม "
+            f"(จาก {n_gross:,} เรื่อง)" if budget_gross is not None else "ข้อมูลยังไม่พอ"
+        ),
         "budget_score_r": budget_score,
-        "top_genre": gross_rows[0] if gross_rows else None,
+        "budget_score_text": (
+            f"ทุนสร้างกับคะแนน{strength_word(budget_score)} ใช้เงินมากไม่ได้ทำให้ผู้ชมให้คะแนนดีขึ้น "
+            f"(จาก {n_score:,} เรื่อง)" if budget_score is not None else "ข้อมูลยังไม่พอ"
+        ),
+        "top_genre": top_genre,
+        "top_genre_text": (
+            f"รายได้มัธยฐาน {format_money(top_genre['value'])} ต่อเรื่อง สูงสุดในบรรดาประเภทที่มีหนัง"
+            f"อย่างน้อย {MIN_GENRE_COUNT} เรื่อง (จาก {top_genre['count']:,} เรื่อง)"
+            if top_genre else "ข้อมูลยังไม่พอ"
+        ),
+    }
+
+
+def home_summary(df):
+    """Headline counters for the home page."""
+    return {
+        "movies": int(len(df)),
+        "year_min": int(df["year"].min()) if len(df) else None,
+        "year_max": int(df["year"].max()) if len(df) else None,
+        "total_gross": float(df["gross"].sum()),
+        "mean_score": float(df["score"].mean()) if df["score"].notna().any() else None,
+    }
+
+
+FEATURED_MIN_SCORE = 7.5
+
+
+def featured_movie(df, day):
+    """"Movie of the day": a random movie scoring 7.5+, the same for the whole day."""
+    pool = df[df["score"] >= FEATURED_MIN_SCORE].sort_values("id")
+    if pool.empty:
+        return None
+    rng = np.random.default_rng(day.toordinal())  # seeded by the date
+    row = pool.iloc[int(rng.integers(len(pool)))]
+    return {key: (None if pd.isna(value) else value) for key, value in row.to_dict().items()}
+
+
+def dashboard_highlights(df):
+    """One number per Tableau chart, from the current data, shown under the dashboard."""
+    fin = financial_rows(df)
+    by_year = df.groupby("year")["gross"].sum()
+    genre_rows, _ = genre_metric(df, "gross", "mean")
+    r, _ = pearson_r(df["budget"], df["gross"])
+    countries = df["country"].value_counts()
+    companies, _ = top_by_total_gross(df, "company", n=1)
+    return {
+        "year": (f"ปีที่รายได้รวมสูงสุดคือ {int(by_year.idxmax())} ({format_money(by_year.max())})"
+                 if not by_year.empty else ""),
+        "genre": (f"รายได้เฉลี่ยสูงสุด: {genre_rows[0]['label']} ({format_money(genre_rows[0]['value'])} ต่อเรื่อง)"
+                  if genre_rows else ""),
+        "scatter": (f"r = {r:.2f} จาก {len(fin):,} เรื่องที่มีทั้งทุนสร้างและรายได้" if r is not None else ""),
+        "country": (f"{countries.index[0]} มีหนังมากที่สุด ({int(countries.iloc[0]):,} เรื่อง จาก {countries.size} ประเทศ)"
+                    if not countries.empty else ""),
+        "company": (f"อันดับ 1: {companies[0]['label']} ({format_money(companies[0]['value'])})"
+                    if companies else ""),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Box Office Simulator: multiple linear regression with numpy (no scikit-learn)
+# ---------------------------------------------------------------------------
+
+VERDICTS = [
+    # (minimum ROI, key, label, description)
+    (3.0, "blockbuster", "BLOCKBUSTER", "ทำเงินได้ตั้งแต่ 3 เท่าของทุนสร้างขึ้นไป"),
+    (1.5, "hit", "HIT", "ทำเงินได้ 1.5–3 เท่าของทุนสร้าง"),
+    (1.0, "breakeven", "BREAK EVEN", "รายได้พอๆ กับทุนสร้าง (1–1.5 เท่า)"),
+    (0.0, "flop", "FLOP", "รายได้ต่ำกว่าทุนสร้าง"),
+]
+SIMILAR_COUNT = 5
+# Ranking similar movies: distance = |log budget difference|
+#   + penalty when the rating differs + a small tie-breaker for distance in years.
+RATING_MISMATCH_PENALTY = 0.25
+YEAR_DISTANCE_WEIGHT = 0.005
+
+
+def design_matrix(numeric_columns, genres, genre_list):
+    """Build X = [1, numeric columns..., one dummy per genre except the baseline].
+
+    The first genre in `genre_list` is the baseline (all dummies are 0).
+    """
+    columns = [np.ones(len(genres))] + [np.asarray(col, dtype=float) for col in numeric_columns]
+    for genre in genre_list[1:]:
+        columns.append((np.asarray(genres) == genre).astype(float))
+    return np.column_stack(columns)
+
+
+def fit_ols(X, y):
+    """Ordinary least squares: returns coefficients, R² and residuals."""
+    coef, *_ = np.linalg.lstsq(X, y, rcond=None)
+    residuals = y - X @ coef
+    ss_tot = float(((y - y.mean()) ** 2).sum())
+    r2 = 1 - float((residuals ** 2).sum()) / ss_tot if ss_tot else 0.0
+    return coef, r2, residuals
+
+
+def build_simulator_models(df):
+    """Fit the revenue and score models on the current data.
+
+    Revenue: log(gross) = b0 + b1·log(budget) + b2·runtime + b3·year + genre dummies
+    Score:   score      = c0 + c1·runtime     + c2·year    + genre dummies
+    Only genres with at least MIN_GENRE_COUNT movies (with budget and gross)
+    are modelled; the most common genre is the baseline.
+    """
+    fin = financial_rows(df)
+    fin = fin[(fin["gross"] > 0) & fin["runtime"].notna()]
+    counts = fin["genre"].value_counts()
+    genre_list = counts[counts >= MIN_GENRE_COUNT].index.tolist()
+    if len(genre_list) < 2:
+        return None
+
+    rev = fin[fin["genre"].isin(genre_list)]
+    X_rev = design_matrix([np.log(rev["budget"]), rev["runtime"], rev["year"]], rev["genre"], genre_list)
+    rev_coef, rev_r2, rev_resid = fit_ols(X_rev, np.log(rev["gross"].to_numpy(dtype=float)))
+
+    sc = df[df["genre"].isin(genre_list)].dropna(subset=["score", "runtime"])
+    X_sc = design_matrix([sc["runtime"], sc["year"]], sc["genre"], genre_list)
+    sc_coef, sc_r2, _ = fit_ols(X_sc, sc["score"].to_numpy(dtype=float))
+
+    per_year = rev.groupby("year").size()
+    well_covered_years = per_year[per_year >= MIN_YEAR_FINANCIAL].index
+    default_year = int(well_covered_years.max()) if len(well_covered_years) else int(rev["year"].max())
+
+    # Genre effects relative to the baseline genre. On the log scale a
+    # coefficient b means "gross × e^b"; for score it is simply "+b points".
+    genre_effects = [{"genre": genre_list[0], "gross_multiplier": 1.0, "score_change": 0.0}] + [
+        {"genre": g, "gross_multiplier": math.exp(rev_coef[4 + i]), "score_change": float(sc_coef[3 + i])}
+        for i, g in enumerate(genre_list[1:])
+    ]
+    return {
+        "genres": genre_list,
+        "baseline": genre_list[0],
+        "revenue": {
+            "coef": rev_coef.tolist(),
+            "r2": rev_r2,
+            "n": len(rev),
+            # Middle 50% of real movies fall within these residuals (log scale)
+            "resid_low": float(np.percentile(rev_resid, 25)),
+            "resid_high": float(np.percentile(rev_resid, 75)),
+            # Plain-language effects, in percent change of predicted gross
+            "budget_plus_10pct": (1.1 ** rev_coef[1] - 1) * 100,
+            "runtime_plus_10min": (math.exp(10 * rev_coef[2]) - 1) * 100,
+            "year_plus_1": (math.exp(rev_coef[3]) - 1) * 100,
+        },
+        "score": {
+            "coef": sc_coef.tolist(),
+            "r2": sc_r2,
+            "n": len(sc),
+            # Change in predicted score (points)
+            "runtime_plus_10min": 10 * float(sc_coef[1]),
+            "year_plus_10": 10 * float(sc_coef[2]),
+        },
+        "genre_effects": genre_effects,
+        "ranges": {
+            "budget_min": float(rev["budget"].min()),
+            "budget_max": float(rev["budget"].max()),
+            "budget_default": float(rev["budget"].median()),
+            "runtime_min": int(rev["runtime"].min()),
+            "runtime_max": int(rev["runtime"].max()),
+            "runtime_default": int(round(rev["runtime"].median())),
+            "year_min": int(rev["year"].min()),
+            "year_max": max(int(rev["year"].max()), date.today().year),
+            "year_default": default_year,
+        },
+    }
+
+
+def verdict_for(roi):
+    for minimum, key, label, description in VERDICTS:
+        if roi >= minimum:
+            return {"key": key, "label": label, "description": description}
+    return {"key": "flop", "label": "FLOP", "description": VERDICTS[-1][3]}
+
+
+def similar_movies(df, genre, budget, year, rating, count=SIMILAR_COUNT):
+    """Real movies of the same genre with the closest budget (same rating preferred)."""
+    pool = financial_rows(df)
+    pool = pool[(pool["genre"] == genre) & (pool["budget"] > 0)]
+    if pool.empty:
+        return []
+    distance = (np.log(pool["budget"]) - math.log(budget)).abs()
+    distance = distance + (pool["year"] - year).abs() * YEAR_DISTANCE_WEIGHT
+    if rating:
+        distance = distance + (pool["rating"] != rating) * RATING_MISMATCH_PENALTY
+    nearest = pool.loc[distance.nsmallest(count).index]
+    return [
+        {
+            "name": row["name"],
+            "year": int(row["year"]),
+            "rating": None if pd.isna(row["rating"]) else row["rating"],
+            "budget": float(row["budget"]),
+            "gross": float(row["gross"]),
+            "roi": float(row["roi"]),
+            "score": None if pd.isna(row["score"]) else float(row["score"]),
+        }
+        for _, row in nearest.iterrows()
+    ]
+
+
+def simulate(models, df, genre, budget, runtime, year, rating=""):
+    """Predict gross, profit, ROI and score for an imaginary movie."""
+    genre_list = models["genres"]
+    rev, sc = models["revenue"], models["score"]
+
+    x_rev = design_matrix([[math.log(budget)], [runtime], [year]], [genre], genre_list)[0]
+    log_gross = float(x_rev @ np.array(rev["coef"]))
+    gross = math.exp(log_gross)
+
+    x_sc = design_matrix([[runtime], [year]], [genre], genre_list)[0]
+    score = min(10.0, max(0.0, float(x_sc @ np.array(sc["coef"]))))
+
+    roi = gross / budget
+    return {
+        "gross": {
+            "predicted": gross,
+            "low": math.exp(log_gross + rev["resid_low"]),
+            "high": math.exp(log_gross + rev["resid_high"]),
+        },
+        "profit": gross - budget,
+        "roi": roi,
+        "score": score,
+        "verdict": verdict_for(roi),
+        "models": {
+            "revenue": {"r2": rev["r2"], "n": rev["n"]},
+            "score": {"r2": sc["r2"], "n": sc["n"]},
+        },
+        "similar": similar_movies(df, genre, budget, year, rating),
     }
 
 

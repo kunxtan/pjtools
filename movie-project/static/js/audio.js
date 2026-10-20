@@ -1,17 +1,22 @@
 /* CineScope sound effects — generated with the Web Audio API (no audio files).
  *
- * Sound is OFF by default. The AudioContext is only created after the user
- * presses something (browsers block audio before a user gesture).
+ * Sound is OFF by default (the 🔊/🔇 button in the navbar turns it on, and the
+ * choice is remembered). The AudioContext is only created after the user
+ * presses something on the page, or on the page that loads right after they
+ * pressed save/delete (so the "saved" clapper sound can play).
  *
  * Usage: CineAudio.play("click" | "clapper" | "film" | "cash" |
  *                       "blockbuster" | "hit" | "breakeven" | "flop")
  */
 const CineAudio = (() => {
   const STORAGE_KEY = "cinescope-sound";
+  const ACTION_KEY = "cinescope-user-action"; // set when a form is submitted
+  const ACTION_WINDOW_MS = 10000;
   let ctx = null;
   let master = null;
   let noiseBuffer = null;
   let enabled = readPreference();
+  let userHasPressed = false;
 
   function readPreference() {
     try {
@@ -155,8 +160,31 @@ const CineAudio = (() => {
     },
   };
 
+  // The page that loads right after the user pressed "save" / "delete" may play
+  // its confirmation sound: that press started this navigation.
+  function cameFromUserAction() {
+    try {
+      const at = Number(sessionStorage.getItem(ACTION_KEY));
+      sessionStorage.removeItem(ACTION_KEY);
+      return at > 0 && Date.now() - at < ACTION_WINDOW_MS;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function markUserAction() {
+    try {
+      sessionStorage.setItem(ACTION_KEY, String(Date.now()));
+    } catch (error) {
+      /* storage blocked: the next page simply stays silent */
+    }
+  }
+
   function play(name) {
     if (!enabled || !sounds[name]) return;
+    // The AudioContext only starts after the user has pressed something.
+    if (!userHasPressed) userHasPressed = cameFromUserAction();
+    if (!userHasPressed) return;
     const context = ensureContext();
     if (!context) return;
 
@@ -176,13 +204,15 @@ const CineAudio = (() => {
 
   function setEnabled(value) {
     enabled = Boolean(value);
+    userHasPressed = true; // called from a click on the sound button
     savePreference();
-    if (enabled) ensureContext(); // called from a click, so this is allowed
+    if (enabled) ensureContext();
   }
 
   // Start the AudioContext after the first user gesture (if sound is on).
   function unlockOnFirstGesture() {
     const unlock = () => {
+      userHasPressed = true;
       if (enabled) ensureContext();
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
@@ -196,6 +226,7 @@ const CineAudio = (() => {
   return {
     play,
     setEnabled,
+    markUserAction,
     isEnabled: () => enabled,
   };
 })();

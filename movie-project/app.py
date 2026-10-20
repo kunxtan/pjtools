@@ -6,6 +6,7 @@ Run with:
 """
 
 import math
+import re
 from datetime import date
 
 from flask import (Flask, flash, jsonify, redirect, render_template, request,
@@ -21,17 +22,22 @@ import data_service
 SITE_NAME = "CineScope"
 SITE_TAGLINE = "ทุกความสำเร็จของหนัง มีตัวเลขเล่าเรื่อง"
 
-GROUP_NAME = "ชื่อกลุ่ม"
-MEMBERS = [
-    "สมาชิกคนที่ 1",
-    "สมาชิกคนที่ 2",
-    "สมาชิกคนที่ 3",
-    "สมาชิกคนที่ 4",
-    "สมาชิกคนที่ 5",
-]
+# Group name and members, shown in the footer of every page.
+GROUP = {
+    "name": "ชื่อกลุ่ม",
+    "members": [
+        "สมาชิกคนที่ 1",
+        "สมาชิกคนที่ 2",
+        "สมาชิกคนที่ 3",
+        "สมาชิกคนที่ 4",
+        "สมาชิกคนที่ 5",
+    ],
+}
 DATA_SOURCE = "Movie Industry dataset (movies.csv) - 7,668 movies, 1980-2020"
 
-# Paste your Tableau Public share link here. Leave empty to show setup instructions.
+# Paste your Tableau Public link here, for example:
+#   "https://public.tableau.com/views/MovieIndustry/Dashboard"
+# Leave it empty to show setup instructions on the Dashboard page.
 TABLEAU_URL = ""
 
 # One color per genre, shared by every page and every chart.
@@ -66,8 +72,7 @@ HEAT_NEGATIVE = (70, 141, 229)
 HEAT_NEUTRAL = (39, 48, 82)
 HEAT_POSITIVE = (242, 193, 78)
 
-# Navbar entries: (endpoint, label, emoji). Entries whose page does not exist
-# yet are skipped automatically, so the navbar never shows a broken link.
+# Navbar entries: (endpoint, label, emoji), the same on every page.
 NAV_ITEMS = [
     ("home", "หน้าแรก", "🏠"),
     ("movies", "รายการหนัง", "🎞️"),
@@ -124,13 +129,12 @@ def heat_style(r):
 
 
 def nav_items():
-    """Navbar links for pages that exist, with the current page marked."""
+    """Navbar links with the current page marked (the add/edit form counts as "movies")."""
     endpoint = request.endpoint or ""
     current = "movies" if endpoint.startswith("movie") else endpoint
     return [
         {"url": url_for(name), "label": label, "icon": icon, "active": name == current}
         for name, label, icon in NAV_ITEMS
-        if name in app.view_functions
     ]
 
 
@@ -140,8 +144,7 @@ def inject_site_info():
     return {
         "site_name": SITE_NAME,
         "site_tagline": SITE_TAGLINE,
-        "group_name": GROUP_NAME,
-        "members": MEMBERS,
+        "group": GROUP,
         "data_source": DATA_SOURCE,
         "tableau_url": TABLEAU_URL,
         "genre_colors": GENRE_COLORS,
@@ -205,10 +208,16 @@ def handle_excel_locked(error):
 # ---------------------------------------------------------------------------
 
 @app.route("/")
-def root():
-    """Start page: the home page if it exists, otherwise the movie list."""
-    target = "home" if "home" in app.view_functions else "movies"
-    return redirect(url_for(target))
+def home():
+    """Home: headline counters, key findings and the movie of the day."""
+    df = data_service.load_movies()
+    return render_template(
+        "index.html",
+        summary=analysis.home_summary(df),
+        findings=analysis.key_findings(df),
+        featured=analysis.featured_movie(df, date.today()),
+        featured_min_score=analysis.FEATURED_MIN_SCORE,
+    )
 
 
 @app.route("/movies")
@@ -320,6 +329,114 @@ def analysis_page():
     """Statistics and charts, recomputed from the current Excel file on every visit."""
     results = analysis.run_analysis(data_service.load_movies())
     return render_template("analysis.html", a=results, heat_style=heat_style)
+
+
+# ---------------------------------------------------------------------------
+# Box Office Simulator
+# ---------------------------------------------------------------------------
+
+_simulator_cache = {"version": None, "models": None}
+
+
+def simulator_models():
+    """Regression models, rebuilt only when the Excel file has changed."""
+    version = data_service.data_version()
+    if _simulator_cache["version"] != version:
+        _simulator_cache["models"] = analysis.build_simulator_models(data_service.load_movies())
+        _simulator_cache["version"] = version
+    return _simulator_cache["models"]
+
+
+def parse_simulation_input(payload, models, ratings):
+    """Validate simulator input. Returns (values, errors) with Thai messages."""
+    ranges = models["ranges"]
+    errors = {}
+
+    def number(field, label, low, high, separator=","):
+        try:
+            value = float(payload.get(field))
+        except (TypeError, ValueError):
+            errors[field] = f"{label}ต้องเป็นตัวเลข"
+            return None
+        if not low <= value <= high:
+            spec = f"{separator}.0f"
+            errors[field] = f"{label}ต้องอยู่ระหว่าง {low:{spec}} ถึง {high:{spec}}"
+            return None
+        return value
+
+    genre = str(payload.get("genre") or "")
+    if genre not in models["genres"]:
+        errors["genre"] = "กรุณาเลือกประเภทหนังจากรายการ"
+    rating = str(payload.get("rating") or "")
+    if rating and rating not in ratings:
+        errors["rating"] = "กรุณาเลือกเรทจากรายการ"
+
+    values = {
+        "genre": genre,
+        "rating": rating,
+        "budget": number("budget", "ทุนสร้าง", ranges["budget_min"], ranges["budget_max"]),
+        "runtime": number("runtime", "ความยาว", ranges["runtime_min"], ranges["runtime_max"]),
+        "year": number("year", "ปีที่ฉาย", ranges["year_min"], ranges["year_max"], separator=""),
+    }
+    return values, errors
+
+
+@app.route("/simulator")
+def simulator():
+    models = simulator_models()
+    choices = data_service.get_choices()
+    return render_template("simulator.html", models=models, ratings=choices["rating"])
+
+
+@app.route("/api/simulate", methods=["POST"])
+def api_simulate():
+    """Predict gross, ROI and score for an imaginary movie (JSON in, JSON out)."""
+    models = simulator_models()
+    if models is None:
+        return jsonify({"ok": False, "error": "ข้อมูลยังไม่พอสำหรับสร้างโมเดล"}), 503
+
+    payload = request.get_json(silent=True) or request.form
+    ratings = data_service.get_choices()["rating"]
+    values, errors = parse_simulation_input(payload, models, ratings)
+    if errors:
+        return jsonify({"ok": False, "error": "ข้อมูลไม่ถูกต้อง", "errors": errors}), 400
+
+    result = analysis.simulate(
+        models, data_service.load_movies(),
+        genre=values["genre"], budget=values["budget"], runtime=values["runtime"],
+        year=int(values["year"]), rating=values["rating"],
+    )
+    return jsonify({"ok": True, "input": values, **result})
+
+
+# ---------------------------------------------------------------------------
+# Dashboard (Tableau Public)
+# ---------------------------------------------------------------------------
+
+def tableau_embed_url(url):
+    """Turn a Tableau Public share link into an embeddable iframe URL.
+
+    Accepts both link styles Tableau Public gives out:
+      https://public.tableau.com/views/<Workbook>/<Sheet>?...
+      https://public.tableau.com/app/profile/<user>/viz/<Workbook>/<Sheet>
+    """
+    url = (url or "").strip()
+    if not url:
+        return ""
+    match = re.search(r"/viz/([^/?#]+)/([^/?#]+)", url)
+    if match:
+        url = f"https://public.tableau.com/views/{match.group(1)}/{match.group(2)}"
+    base = url.split("?")[0].split("#")[0]
+    return f"{base}?:embed=y&:showVizHome=no&:toolbar=yes&:display_count=no&:tabs=no"
+
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template(
+        "dashboard.html",
+        embed_url=tableau_embed_url(TABLEAU_URL),
+        highlights=analysis.dashboard_highlights(data_service.load_movies()),
+    )
 
 
 @app.route("/api/status")

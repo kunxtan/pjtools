@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Box Office Simulator{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div class="marquee marquee--compact" data-marquee>
+    <p class="marquee__kicker">BOX OFFICE SIMULATOR</p>
+    <h1 class="marquee__title">สร้างหนังสมมติ</h1>
+    <p class="marquee__sub">เลือกส่วนผสมของหนัง แล้วดูว่าจะเป็น Blockbuster หรือ Flop</p>
+  </div>
+</section>
+
+<aside class="notice-box notice-box--compact" aria-labelledby="sim-disclaimer-title">
+  <h2 class="notice-box__title" id="sim-disclaimer-title"><span aria-hidden="true">⚠️</span> เป็นการประมาณ ไม่ใช่การทำนายที่แม่นยำ</h2>
+  <p class="notice-box__text">
+    ผลลัพธ์คำนวณด้วย Linear Regression จากหนังจริงในไฟล์ Excel ปัจจุบัน เป็นแนวโน้มจากข้อมูลในอดีตเท่านั้น
+    รายได้จริงของหนังขึ้นกับปัจจัยอีกมากที่โมเดลไม่รู้ เช่น นักแสดง เนื้อเรื่อง การตลาด และคู่แข่งในช่วงฉาย
+  </p>
+</aside>
+
+{% if models %}
+{% set r = models.ranges %}
+<div class="sim-layout">
+  {# ------------------------------------------------------------ Inputs #}
+  <form class="panel sim-form" id="sim-form" novalidate
+        data-budget-min="{{ r.budget_min }}" data-budget-max="{{ r.budget_max }}"
+        data-budget-default="{{ r.budget_default }}">
+    <h2 class="panel__title"><span aria-hidden="true">📋</span> ใบสั่งงานสร้าง</h2>
+
+    <fieldset class="genre-picker">
+      <legend>ประเภทหนัง</legend>
+      <div class="genre-picker__options">
+        {% for genre in models.genres %}
+        <label class="genre-chip" style="--genre: {{ genre_color(genre) }}">
+          <input type="radio" name="genre" value="{{ genre }}" {% if genre == 'Action' or (loop.first and 'Action' not in models.genres) %}checked{% endif %}>
+          <span>{{ genre }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <div class="slider-field">
+      <div class="slider-field__head">
+        <label for="budget-slider">ทุนสร้าง</label>
+        <output id="budget-output" for="budget-slider" class="slider-field__value"></output>
+      </div>
+      <input type="range" id="budget-slider" min="0" max="1000" step="1" value="500">
+      <div class="slider-field__scale" aria-hidden="true">
+        <span>{{ r.budget_min | money }}</span><span>{{ r.budget_max | money }}</span>
+      </div>
+      <p class="field-hint">ช่วงตามข้อมูลจริง ปรับแบบสเกลลอการิทึมเพื่อให้เลือกทุนน้อยๆ ได้ละเอียด</p>
+    </div>
+
+    <div class="slider-field">
+      <div class="slider-field__head">
+        <label for="runtime-slider">ความยาว</label>
+        <output id="runtime-output" for="runtime-slider" class="slider-field__value"></output>
+      </div>
+      <input type="range" id="runtime-slider" name="runtime"
+             min="{{ r.runtime_min }}" max="{{ r.runtime_max }}" step="1" value="{{ r.runtime_default }}">
+      <div class="slider-field__scale" aria-hidden="true">
+        <span>{{ r.runtime_min }} นาที</span><span>{{ r.runtime_max }} นาที</span>
+      </div>
+    </div>
+
+    <div class="slider-field">
+      <div class="slider-field__head">
+        <label for="year-slider">ปีที่ฉาย</label>
+        <output id="year-output" for="year-slider" class="slider-field__value"></output>
+      </div>
+      <input type="range" id="year-slider" name="year"
+             min="{{ r.year_min }}" max="{{ r.year_max }}" step="1" value="{{ r.year_default }}">
+      <div class="slider-field__scale" aria-hidden="true">
+        <span>{{ r.year_min }}</span><span>{{ r.year_max }}</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="rating-select">เรท</label>
+      <select id="rating-select" name="rating" aria-describedby="rating-hint">
+        <option value="">ไม่ระบุ</option>
+        {% for rating in ratings %}
+        <option value="{{ rating }}" {% if rating == 'PG-13' %}selected{% endif %}>{{ rating }}</option>
+        {% endfor %}
+      </select>
+      <p class="field-hint" id="rating-hint">ใช้เลือกหนังจริงที่ใกล้เคียงมาเปรียบเทียบ (โมเดลไม่ได้ใช้เรทในการคำนวณ)</p>
+    </div>
+
+    <button class="btn btn--gold btn--lg sim-button" id="sim-button" type="submit">
+      <span aria-hidden="true">🎬</span> <span class="sim-button__label">เริ่มถ่ายทำ</span>
+    </button>
+    <noscript><p class="field-error">หน้านี้ต้องเปิด JavaScript เพื่อใช้งาน Simulator</p></noscript>
+  </form>
+
+  {# ------------------------------------------------------------- Stage #}
+  <section class="panel sim-stage" id="sim-stage" aria-labelledby="stage-title" aria-busy="false">
+    <h2 class="panel__title" id="stage-title"><span aria-hidden="true">🎥</span> ผลการถ่ายทำ</h2>
+
+    <div class="clapper clapper--small" id="sim-clapper" aria-hidden="true">
+      <div class="clapper__stick"></div>
+      <div class="clapper__hinge"></div>
+      <div class="clapper__board">
+        <div class="clapper__row">
+          <span class="clapper__label">PROD.</span>
+          <span class="clapper__value">{{ site_name }}</span>
+        </div>
+        <div class="clapper__row clapper__row--split">
+          <div><span class="clapper__label">SCENE</span><span class="clapper__value" id="clapper-scene">—</span></div>
+          <div><span class="clapper__label">TAKE</span><span class="clapper__value" id="clapper-take">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sim-placeholder" id="sim-placeholder">
+      <p class="sim-placeholder__icon" aria-hidden="true">🍿</p>
+      <p>เลือกส่วนผสมทางซ้าย แล้วกด <strong>เริ่มถ่ายทำ</strong></p>
+    </div>
+
+    <div class="sim-error" id="sim-error" role="alert" hidden></div>
+
+    <div class="sim-result" id="sim-result" hidden>
+      <div class="box-office">
+        <p class="box-office__label">รายได้ที่คาดการณ์</p>
+        <div class="odometer" id="gross-odometer" aria-hidden="true">$0</div>
+        <p class="sr-only" id="gross-text"></p>
+        <p class="box-office__range" id="gross-range"></p>
+      </div>
+
+      <div class="score-stars">
+        <p class="score-stars__label">คะแนนที่คาดการณ์</p>
+        <div class="stars" id="stars" aria-hidden="true">
+          {% for i in range(10) %}<span class="star" style="--fill: 0%">★</span>{% endfor %}
+        </div>
+        <p class="score-stars__value" id="score-text"></p>
+      </div>
+
+      <div class="stat-row sim-stats">
+        <div class="stat-tile"><p class="stat-tile__label">กำไรที่คาดการณ์</p><p class="stat-tile__value" id="profit-value">—</p></div>
+        <div class="stat-tile"><p class="stat-tile__label">ROI ที่คาดการณ์</p><p class="stat-tile__value" id="roi-value">—</p></div>
+        <div class="stat-tile"><p class="stat-tile__label">R² โมเดลรายได้</p><p class="stat-tile__value" id="r2-revenue">—</p></div>
+        <div class="stat-tile"><p class="stat-tile__label">R² โมเดลคะแนน</p><p class="stat-tile__value" id="r2-score">—</p></div>
+      </div>
+
+      <div class="marquee verdict" id="verdict" data-marquee hidden>
+        <p class="marquee__kicker">ผลบ็อกซ์ออฟฟิศ</p>
+        <p class="verdict__label" id="verdict-label"></p>
+        <p class="marquee__sub" id="verdict-desc"></p>
+      </div>
+    </div>
+  </section>
+</div>
+
+{# -------------------------------------------------------- Similar movies #}
+<section class="panel" id="similar-panel" aria-labelledby="similar-title" hidden>
+  <h2 class="panel__title" id="similar-title"><span aria-hidden="true">🎞️</span> หนังจริงที่ใกล้เคียงที่สุด 5 เรื่อง</h2>
+  <p class="topic__note" id="similar-note"></p>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th scope="col">ชื่อเรื่อง</th>
+          <th scope="col" class="col-num">ปี</th>
+          <th scope="col">เรท</th>
+          <th scope="col" class="col-num">ทุนสร้าง</th>
+          <th scope="col" class="col-num">รายได้จริง</th>
+          <th scope="col" class="col-num">ROI จริง</th>
+          <th scope="col" class="col-num">คะแนน</th>
+        </tr>
+      </thead>
+      <tbody id="similar-body"></tbody>
+    </table>
+  </div>
+</section>
+
+{# ---------------------------------------------------------------- History #}
+<section class="panel" aria-labelledby="history-title">
+  <h2 class="panel__title" id="history-title"><span aria-hidden="true">🗂️</span> เปรียบเทียบ 5 ครั้งล่าสุด</h2>
+  <div class="table-scroll">
+    <table class="data-table history-table">
+      <caption class="sr-only">ผลการลองจำลองล่าสุดไม่เกิน 5 ครั้ง ครั้งล่าสุดอยู่บนสุด</caption>
+      <thead>
+        <tr>
+          <th scope="col">Take</th>
+          <th scope="col">ประเภท</th>
+          <th scope="col" class="col-num">ทุนสร้าง</th>
+          <th scope="col" class="col-num">ความยาว</th>
+          <th scope="col">เรท</th>
+          <th scope="col" class="col-num">ปี</th>
+          <th scope="col" class="col-num">รายได้คาดการณ์</th>
+          <th scope="col" class="col-num">ROI</th>
+          <th scope="col" class="col-num">คะแนน</th>
+          <th scope="col">ผล</th>
+        </tr>
+      </thead>
+      <tbody id="history-body">
+        <tr class="history-empty"><td colspan="10">ยังไม่มีการลอง — ผลจะถูกเก็บไว้ที่นี่ (หายไปเมื่อรีเฟรชหน้า)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{# ------------------------------------------------------ How the model works #}
+{% set rev = models.revenue %}
+{% set sc = models.score %}
+<section class="panel" aria-labelledby="model-title">
+  <details class="model-details">
+    <summary><h2 class="panel__title" id="model-title"><span aria-hidden="true">🧮</span> หลักการของโมเดล</h2></summary>
+    <div class="model-grid">
+      <div>
+        <h3>โมเดลรายได้</h3>
+        <p class="model-formula">log(รายได้) = b₀ + b₁·log(ทุนสร้าง) + b₂·ความยาว + b₃·ปี + ผลของประเภท</p>
+        <ul>
+          <li>R² = {{ rev.r2 | number(2) }} จากหนัง {{ rev.n | number }} เรื่องที่มีทั้งทุนสร้างและรายได้</li>
+          <li>ทุนสร้างเพิ่ม 10% → รายได้คาดการณ์เพิ่มประมาณ {{ rev.budget_plus_10pct | number(1) }}%</li>
+          <li>ความยาวเพิ่ม 10 นาที → รายได้คาดการณ์เปลี่ยน {{ '%+.1f' % rev.runtime_plus_10min }}%</li>
+          <li>ฉายช้าลง 1 ปี → รายได้คาดการณ์เปลี่ยน {{ '%+.1f' % rev.year_plus_1 }}% (ส่วนหนึ่งมาจากเงินเฟ้อ)</li>
+          <li>ใช้ log เพราะรายได้และทุนสร้างเบ้ขวามาก ช่วงที่แสดงคือช่วงที่หนังจริงครึ่งหนึ่ง (เปอร์เซ็นไทล์ 25–75 ของค่าคลาดเคลื่อน) ตกอยู่</li>
+        </ul>
+      </div>
+      <div>
+        <h3>โมเดลคะแนน</h3>
+        <p class="model-formula">คะแนน = c₀ + c₁·ความยาว + c₂·ปี + ผลของประเภท</p>
+        <ul>
+          <li>R² = {{ sc.r2 | number(2) }} จากหนัง {{ sc.n | number }} เรื่อง</li>
+          <li>ความยาวเพิ่ม 10 นาที → คะแนนคาดการณ์เปลี่ยน {{ '%+.2f' % sc.runtime_plus_10min }} คะแนน</li>
+          <li>ฉายช้าลง 10 ปี → คะแนนคาดการณ์เปลี่ยน {{ '%+.2f' % sc.year_plus_10 }} คะแนน</li>
+          <li>R² ต่ำกว่าโมเดลรายได้ แปลว่าคะแนนขึ้นกับสิ่งที่ตัวเลขเหล่านี้วัดไม่ได้ (เช่น คุณภาพของหนัง) มากกว่า</li>
+        </ul>
+      </div>
+    </div>
+    <h3>ผลของประเภทหนัง (เทียบกับ {{ models.baseline }})</h3>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th scope="col">ประเภท</th><th scope="col" class="col-num">รายได้ (เท่าของ {{ models.baseline }})</th><th scope="col" class="col-num">คะแนน (เทียบกับ {{ models.baseline }})</th></tr></thead>
+        <tbody>
+          {% for effect in models.genre_effects %}
+          <tr>
+            <th scope="row"><span class="genre-badge" style="--genre: {{ genre_color(effect.genre) }}">{{ effect.genre }}</span></th>
+            <td class="col-num">× {{ effect.gross_multiplier | number(2) }}</td>
+            <td class="col-num">{{ '%+.2f' % effect.score_change }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="topic__note">
+      <span aria-hidden="true">ℹ️</span>
+      ใช้เฉพาะประเภทที่มีหนังอย่างน้อย 30 เรื่อง · คำนวณด้วย numpy (least squares) ไม่ใช้ scikit-learn ·
+      โมเดลสร้างใหม่อัตโนมัติเมื่อไฟล์ Excel เปลี่ยน
+    </p>
+  </details>
+</section>
+
+{# Film strip that slides across the screen during the animation #}
+<div class="film-pass" id="film-pass" aria-hidden="true">
+  <div class="filmstrip film-pass__strip">
+    <div class="film-pass__frames">
+      {% for icon in ['🎬', '⭐', '🎞️', '🍿', '🎥', '💰', '🎟️', '🎬', '⭐', '🎞️', '🍿', '🎥'] %}
+      <span class="film-pass__frame">{{ icon }}</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <p class="empty-state__icon" aria-hidden="true">🎞️</p>
+  <p class="empty-state__title">ข้อมูลยังไม่พอสำหรับสร้างโมเดล</p>
+  <p>ต้องมีอย่างน้อย 2 ประเภทหนังที่มีข้อมูลทุนสร้างและรายได้ประเภทละ 30 เรื่องขึ้นไป</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/simulator.js') }}"></script>
+{% endblock %}
