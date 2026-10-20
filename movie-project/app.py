@@ -11,6 +11,7 @@ from datetime import date
 from flask import (Flask, flash, jsonify, redirect, render_template, request,
                    url_for)
 
+import analysis
 import data_service
 
 # ---------------------------------------------------------------------------
@@ -34,28 +35,36 @@ DATA_SOURCE = "Movie Industry dataset (movies.csv) - 7,668 movies, 1980-2020"
 TABLEAU_URL = ""
 
 # One color per genre, shared by every page and every chart.
+# Tuned in OKLCH so every color has the same weight and stays readable on the
+# dark navy background (lightness 0.52-0.67, contrast >= 3:1). Charts always
+# print the genre name next to its color, so color is never the only cue.
 GENRE_COLORS = {
-    "Comedy": "#f5c518",
-    "Action": "#ef4444",
-    "Drama": "#a78bfa",
-    "Crime": "#94a3b8",
-    "Biography": "#f97316",
-    "Adventure": "#22c55e",
-    "Animation": "#60a5fa",
-    "Horror": "#a3e635",
-    "Fantasy": "#e879f9",
-    "Mystery": "#818cf8",
-    "Thriller": "#fb7185",
-    "Family": "#2dd4bf",
-    "Sci-Fi": "#22d3ee",
-    "Romance": "#f472b6",
-    "Western": "#d4a373",
-    "Musical": "#fda4af",
-    "Music": "#f0abfc",
-    "History": "#d6d3d1",
-    "Sport": "#4ade80",
+    "Comedy": "#ae9203",
+    "Action": "#d73337",
+    "Drama": "#8b50cf",
+    "Crime": "#067398",
+    "Biography": "#b65400",
+    "Adventure": "#2f9f3d",
+    "Animation": "#468de5",
+    "Horror": "#02a99b",
+    "Fantasy": "#cf48ab",
+    "Mystery": "#6b6cd0",
+    "Thriller": "#d7506e",
+    "Family": "#029e72",
+    "Sci-Fi": "#01a4b9",
+    "Romance": "#d76797",
+    "Western": "#a67537",
+    "Musical": "#cf6872",
+    "Music": "#a75fb7",
+    "History": "#95752a",
+    "Sport": "#64a737",
 }
-DEFAULT_GENRE_COLOR = "#cbd5e1"
+DEFAULT_GENRE_COLOR = "#7c8799"
+
+# Correlation heatmap: blue for negative r, gold for positive r, neutral at 0.
+HEAT_NEGATIVE = (70, 141, 229)
+HEAT_NEUTRAL = (39, 48, 82)
+HEAT_POSITIVE = (242, 193, 78)
 
 # Navbar entries: (endpoint, label, emoji). Entries whose page does not exist
 # yet are skipped automatically, so the navbar never shows a broken link.
@@ -82,22 +91,7 @@ def is_missing(value):
     return value is None or (isinstance(value, float) and math.isnan(value))
 
 
-@app.template_filter("money")
-def format_money(value):
-    """$1.2B / $1.2M / $350K / $950, or an em dash when missing."""
-    if is_missing(value):
-        return "—"
-    sign = "-" if value < 0 else ""
-    amount = abs(float(value))
-    if amount >= 1e9:
-        text = f"{amount / 1e9:.1f}B"
-    elif amount >= 1e6:
-        text = f"{amount / 1e6:.1f}M"
-    elif amount >= 1e3:
-        text = f"{amount / 1e3:.0f}K"
-    else:
-        text = f"{amount:.0f}"
-    return f"{sign}${text}"
+app.add_template_filter(analysis.format_money, "money")
 
 
 @app.template_filter("number")
@@ -115,6 +109,18 @@ def format_text(value):
 
 def genre_color(genre):
     return GENRE_COLORS.get(genre, DEFAULT_GENRE_COLOR)
+
+
+def heat_style(r):
+    """Inline style for one correlation heatmap cell (background + readable text)."""
+    if is_missing(r):
+        return ""
+    pole = HEAT_POSITIVE if r >= 0 else HEAT_NEGATIVE
+    t = min(abs(r), 1.0)
+    rgb = [round(n + (p - n) * t) for n, p in zip(HEAT_NEUTRAL, pole)]
+    luminance = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255
+    text = "#1d1404" if luminance > 0.5 else "#f4efe3"
+    return f"background-color: rgb({rgb[0]}, {rgb[1]}, {rgb[2]}); color: {text};"
 
 
 def nav_items():
@@ -307,6 +313,13 @@ def movie_delete(movie_id):
     except data_service.ExcelLockedError as error:
         flash(str(error), "error")
     return redirect(next_url)
+
+
+@app.route("/analysis", endpoint="analysis")
+def analysis_page():
+    """Statistics and charts, recomputed from the current Excel file on every visit."""
+    results = analysis.run_analysis(data_service.load_movies())
+    return render_template("analysis.html", a=results, heat_style=heat_style)
 
 
 @app.route("/api/status")
