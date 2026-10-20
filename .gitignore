@@ -1,2 +1,10 @@
-  __pycache__/
-  venv/
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Excel lock files (created while a workbook is open in Excel)
+~$*
+
+# Temporary file written by data_service.write_excel before replacing movies.xlsx
+*.tmp.xlsx
