@@ -935,6 +935,10 @@ select:focus-visible {
   padding: 4px 10px;
 }
 
+.score-value {
+  white-space: nowrap;
+}
+
 /* Laptop / tablet widths: a little more compact so all columns fit without scrolling */
 @media (min-width: 981px) and (max-width: 1240px) {
   .movie-table {
