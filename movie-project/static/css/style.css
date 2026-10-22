@@ -2851,25 +2851,41 @@ input[type="range"]:hover {
    Dashboard page
    ========================================================================== */
 
-.tableau-panel {
-  padding: 12px;
+.chart-about {
+  margin: 0 0 14px;
+  max-width: 860px;
+  color: var(--text-muted);
 }
 
+/* Tableau embed: white "screen" in a gold frame, like a cinema screen */
 .tableau-frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 10;
-  min-height: 560px;
-  border-radius: 8px;
+  aspect-ratio: 16 / 9;
+  min-height: 420px;
+  border: 3px solid var(--gold-dark);
+  border-radius: 10px;
   overflow: hidden;
   background: #fff;
+  box-shadow: 0 0 0 4px var(--bg-deep), 0 0 26px rgba(242, 193, 78, 0.18);
+}
+
+.tableau-frame--map {
+  aspect-ratio: 16 / 10;
+}
+
+.tableau-frame--full {
+  aspect-ratio: 16 / 10;
+  min-height: 600px;
 }
 
 @media (max-width: 760px) {
-  .tableau-frame {
+  .tableau-frame,
+  .tableau-frame--map,
+  .tableau-frame--full {
     aspect-ratio: auto;
-    height: 80vh;
-    min-height: 480px;
+    height: 70vh;
+    min-height: 420px;
   }
 }
 
@@ -2881,8 +2897,65 @@ input[type="range"]:hover {
   border: 0;
 }
 
-.tableau-panel__links {
-  margin: 10px 4px 0;
+.tableau-frame__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  min-height: inherit;
+  margin: 0;
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  background: rgba(5, 6, 13, 0.85);
+}
+
+.tableau-frame__empty span {
+  font-size: 2.2rem;
+}
+
+/* "How to read" box under each chart */
+.chart-reading {
+  margin-top: 16px;
+  padding: 14px 18px;
+  border-left: 4px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  background: rgba(242, 193, 78, 0.08);
+}
+
+.chart-reading p {
+  margin: 0;
+}
+
+.chart-reading p + p {
+  margin-top: 6px;
+}
+
+.chart-reading strong {
+  color: var(--gold-light);
+}
+
+.chart-reading__highlight {
+  font-weight: 600;
+}
+
+.chart-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 22px;
+  margin: 12px 0 0;
+  font-size: 0.92rem;
+}
+
+.chart-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  font-weight: 600;
 }
 
 .setup-box {
@@ -2909,45 +2982,6 @@ input[type="range"]:hover {
   padding: 0;
   background: none;
   color: var(--gold-light);
-}
-
-.chart-notes {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.chart-note {
-  display: flex;
-  gap: 14px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, var(--navy-2), var(--navy));
-}
-
-.chart-note__icon {
-  font-size: 1.8rem;
-  line-height: 1.2;
-}
-
-.chart-note__title {
-  margin: 0 0 4px;
-  font-size: 1.05rem;
-  color: var(--gold-light);
-}
-
-.chart-note p {
-  margin: 0 0 6px;
-  font-size: 0.93rem;
-}
-
-.chart-note__highlight {
-  color: var(--text);
-  font-weight: 600;
 }
 
 /* ==========================================================================

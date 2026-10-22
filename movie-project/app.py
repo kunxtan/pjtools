@@ -39,6 +39,18 @@ DATA_SOURCE = "Movie Industry dataset (movies.csv) - 7,668 movies, 1980-2020"
 # Leave it empty to show setup instructions on the Dashboard page.
 TABLEAU_URL = "https://public.tableau.com/views/Dashboard_17926785905460/Dashboard1?:language=en-US&publish=yes&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link"
 
+# Sheet name of each chart inside the same Tableau workbook: the last part of
+# the sheet's link, https://public.tableau.com/views/<Workbook>/<Sheet>.
+# The Dashboard page shows every chart on its own, then the full dashboard.
+# Update these if the sheets are renamed in Tableau and published again.
+TABLEAU_SHEETS = {
+    "year": "sheet0",       # จำนวนหนังและรายได้ตามปี
+    "genre": "sheet1",      # รายได้เฉลี่ยตามประเภท
+    "scatter": "sheet2",    # ทุนสร้างเทียบรายได้
+    "country": "sheet3",    # แผนที่จำนวนหนังตามประเทศ
+    "company": "Top10",     # Top 10 บริษัท
+}
+
 # One color per genre, shared by every page and every chart.
 # Tuned in OKLCH so every color has the same weight and stays readable on the
 # dark navy background (lightness 0.52-0.67, contrast >= 3:1). Charts always
@@ -412,28 +424,39 @@ def api_simulate():
 # Dashboard (Tableau Public)
 # ---------------------------------------------------------------------------
 
-def tableau_embed_url(url):
-    """Turn a Tableau Public share link into an embeddable iframe URL.
+TABLEAU_EMBED_OPTIONS = ":embed=y&:showVizHome=no&:toolbar=yes&:display_count=no&:tabs=no"
+
+
+def tableau_parts(url):
+    """(workbook, view) from a Tableau Public link, or (None, None).
 
     Accepts both link styles Tableau Public gives out:
       https://public.tableau.com/views/<Workbook>/<Sheet>?...
       https://public.tableau.com/app/profile/<user>/viz/<Workbook>/<Sheet>
     """
-    url = (url or "").strip()
-    if not url:
-        return ""
-    match = re.search(r"/viz/([^/?#]+)/([^/?#]+)", url)
-    if match:
-        url = f"https://public.tableau.com/views/{match.group(1)}/{match.group(2)}"
-    base = url.split("?")[0].split("#")[0]
-    return f"{base}?:embed=y&:showVizHome=no&:toolbar=yes&:display_count=no&:tabs=no"
+    match = re.search(r"/(?:views|viz)/([^/?#]+)/([^/?#]+)", url or "")
+    return (match.group(1), match.group(2)) if match else (None, None)
+
+
+def tableau_links(workbook, view):
+    """Embeddable iframe URL and the normal public page of one Tableau view."""
+    page = f"https://public.tableau.com/views/{workbook}/{view}"
+    return {"embed": f"{page}?{TABLEAU_EMBED_OPTIONS}", "page": page}
 
 
 @app.route("/dashboard")
 def dashboard():
+    workbook, view = tableau_parts(TABLEAU_URL)
+    combined = tableau_links(workbook, view) if workbook else None
+    sheets = {
+        key: tableau_links(workbook, sheet)
+        for key, sheet in TABLEAU_SHEETS.items()
+        if workbook and sheet
+    }
     return render_template(
         "dashboard.html",
-        embed_url=tableau_embed_url(TABLEAU_URL),
+        combined=combined,
+        sheets=sheets,
         highlights=analysis.dashboard_highlights(data_service.load_movies()),
     )
 
