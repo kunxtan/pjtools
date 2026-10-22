@@ -82,8 +82,8 @@ DEFAULT_GENRE_COLOR = "#7c8799"
 NAV_ITEMS = [
     ("home", "หน้าแรก", ""),
     ("movies", "รายการหนัง", ""),
-    ("analysis", "วิเคราะห์ข้อมูล", ""),
     ("simulator", "Box Office Simulator", ""),
+    ("analysis", "วิเคราะห์ข้อมูล", ""),
     ("dashboard", "Dashboard", ""),
 ]
 

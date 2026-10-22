@@ -35,7 +35,7 @@
         <li>
           <a class="nav-link{% if item.active %} is-active{% endif %}" href="{{ item.url }}"
              {% if item.active %}aria-current="page"{% endif %}>
-            <span aria-hidden="true">{{ item.icon }}</span> {{ item.label }}
+            {% if item.icon %}<span aria-hidden="true">{{ item.icon }}</span> {% endif %}{{ item.label }}
           </a>
         </li>
         {% endfor %}

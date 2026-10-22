@@ -1985,12 +1985,60 @@ select:focus-visible {
   font-weight: 600;
 }
 
-.slider-field__value {
+/* Number box next to each slider: type an exact value */
+.number-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.number-box__affix {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.number-box__input {
+  width: 5.2rem;
+  min-height: 40px;
+  padding: 2px 10px;
   font-family: var(--font-display);
   font-size: 1.6rem;
   letter-spacing: 0.04em;
-  color: var(--gold);
   line-height: 1.1;
+  text-align: right;
+  color: var(--gold);
+  background: var(--bg-deep);
+  border: 1px solid var(--gold-dark);
+  border-radius: 8px;
+  /* no spin buttons (they hide the digits); arrow keys still step the value */
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.number-box__input::-webkit-outer-spin-button,
+.number-box__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.number-box__input--budget {
+  width: 6.8rem;
+}
+
+.number-box__input--short {
+  width: 4.6rem;
+}
+
+.number-box__full {
+  margin: 2px 0 0;
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.slider-field .field-error {
+  margin-top: 4px;
 }
 
 input[type="range"] {
