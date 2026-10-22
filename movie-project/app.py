@@ -24,7 +24,7 @@ SITE_TAGLINE = "ทุกความสำเร็จของหนัง ม
 
 # Group name and members, shown in the footer of every page.
 GROUP = {
-    "name": "ชื่อกลุ่ม",
+    "name": "CineScope",
     "members": [
         "นางสาว วนิดา พิทักษ์วัฒนานนท์ 67050499",
         "นางสาว สิริกร เจียรนัยเจริญ 67050572",
