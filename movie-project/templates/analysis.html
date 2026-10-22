@@ -23,8 +23,7 @@
 
 {% macro genre_note(left_out) %}
   <p class="topic__note">
-    <span aria-hidden="true">ℹ️</span>
-    จัดอันดับเฉพาะประเภทที่มีข้อมูลอย่างน้อย {{ a.min_genre_count }} เรื่อง
+        จัดอันดับเฉพาะประเภทที่มีข้อมูลอย่างน้อย {{ a.min_genre_count }} เรื่อง
     {% if left_out %}(ไม่นับ: {{ left_out | join(', ') }}){% endif %}
   </p>
 {% endmacro %}
@@ -76,7 +75,7 @@
 </p>
 
 <aside class="notice-box" aria-labelledby="limits-heading">
-  <h2 class="notice-box__title" id="limits-heading"><span aria-hidden="true">⚠️</span> ข้อจำกัดของข้อมูล</h2>
+  <h2 class="notice-box__title" id="limits-heading">ข้อจำกัดของข้อมูล</h2>
   <ul class="notice-box__list">
     <li>
       หนัง <strong>{{ lim.missing_budget | number }}</strong> เรื่อง ไม่มีข้อมูลทุนสร้าง
@@ -435,8 +434,7 @@
     </figure>
   </div>
   <p class="topic__note">
-    <span aria-hidden="true">ℹ️</span>
-    กราฟเงินใช้เฉพาะหนังที่มีทั้งทุนสร้างและรายได้ และแสดงเฉพาะปีที่มีหนังแบบนี้อย่างน้อย {{ a.min_year_financial }} เรื่อง
+        กราฟเงินใช้เฉพาะหนังที่มีทั้งทุนสร้างและรายได้ และแสดงเฉพาะปีที่มีหนังแบบนี้อย่างน้อย {{ a.min_year_financial }} เรื่อง
     {% if q3.money_left_out %}(ไม่แสดงปี {{ q3.money_left_out | join(', ') }}){% endif %}
     · แยกเป็น 2 กราฟเพราะจำนวนหนังกับจำนวนเงินมีหน่วยต่างกัน
   </p>
@@ -494,8 +492,7 @@
     </figure>
   </div>
   <p class="topic__note">
-    <span aria-hidden="true">ℹ️</span>
-    รายได้รวมนับจากทุกเรื่องที่มีข้อมูลรายได้ บริษัทหรือผู้กำกับที่มีผลงานจำนวนมากจึงมีโอกาสติดอันดับมากกว่า
+        รายได้รวมนับจากทุกเรื่องที่มีข้อมูลรายได้ บริษัทหรือผู้กำกับที่มีผลงานจำนวนมากจึงมีโอกาสติดอันดับมากกว่า
   </p>
   {% else %}
   <p class="chart-caption">{{ q4.caption }}</p>
@@ -604,8 +601,7 @@
     </table>
   </div>
   <p class="topic__note">
-    <span aria-hidden="true">ℹ️</span>
-    แต่ละตัวแปรคำนวณจากเรื่องที่มีค่านั้น (n ต่างกันได้) · SD เป็นค่าของกลุ่มตัวอย่าง (เหมือน STDEV.S ใน Excel)
+        แต่ละตัวแปรคำนวณจากเรื่องที่มีค่านั้น (n ต่างกันได้) · SD เป็นค่าของกลุ่มตัวอย่าง (เหมือน STDEV.S ใน Excel)
     · ฐานนิยมแสดง “—” เมื่อไม่มีค่าใดซ้ำกัน
   </p>
   {% if a.stats.caption %}<p class="topic__answer"><strong>ข้อสังเกต:</strong> {{ a.stats.caption }}</p>{% endif %}

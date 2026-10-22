@@ -360,9 +360,6 @@ code {
   margin-right: auto;
 }
 
-.brand__icon {
-  font-size: 1.5rem;
-}
 
 .brand__name {
   font-family: var(--font-display);
@@ -1083,10 +1080,6 @@ select:focus-visible {
   background: rgba(8, 12, 28, 0.7);
 }
 
-.empty-state__icon {
-  font-size: 3rem;
-  margin: 0;
-}
 
 .empty-state__title {
   font-size: 1.25rem;
@@ -2319,10 +2312,6 @@ input[type="range"]:hover {
   color: var(--text-muted);
 }
 
-.sim-placeholder__icon {
-  font-size: 2.6rem;
-  margin: 0;
-}
 
 .sim-error {
   padding: 14px 18px;
@@ -2606,8 +2595,13 @@ input[type="range"]:hover {
   justify-content: center;
   width: 120px;
   height: 84px;
-  font-size: 2.4rem;
-  background: linear-gradient(180deg, #2a2112, #120d09);
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  letter-spacing: 0.06em;
+  color: var(--gold-light);
+  text-shadow: 0 0 10px rgba(242, 193, 78, 0.5);
+  background: radial-gradient(circle, rgba(242, 193, 78, 0.16) 0 32%, transparent 34%),
+    linear-gradient(180deg, #2a2112, #120d09);
   border: 2px solid #000;
   border-radius: 4px;
 }
@@ -2872,9 +2866,6 @@ input[type="range"]:hover {
   transform: translateY(-3px);
 }
 
-.shortcut__icon {
-  font-size: 2rem;
-}
 
 .shortcut__title {
   font-weight: 700;
