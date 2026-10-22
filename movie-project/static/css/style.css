@@ -2908,6 +2908,132 @@ input[type="range"]:hover {
 }
 
 /* ==========================================================================
+   Loading screen while saving to Excel: a film-leader countdown
+   ========================================================================== */
+
+.loading-screen {
+  --hole: rgba(244, 233, 205, 0.85);
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 16px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(242, 193, 78, 0.16), transparent 45%),
+    rgba(5, 6, 13, 0.94);
+  backdrop-filter: blur(3px);
+  animation: loading-in 0.2s ease-out both;
+}
+
+.loading-screen[hidden] {
+  display: none;
+}
+
+@keyframes loading-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* film edges with sprocket holes, top and bottom */
+.loading-screen::before,
+.loading-screen::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 34px;
+  background-color: #120d09;
+  background-image: radial-gradient(ellipse 7px 5px at 50% 50%, var(--hole) 92%, transparent 100%);
+  background-size: 26px 34px;
+  background-repeat: repeat-x;
+}
+
+.loading-screen::before {
+  top: 0;
+  border-bottom: 2px solid #000;
+}
+
+.loading-screen::after {
+  bottom: 0;
+  border-top: 2px solid #000;
+}
+
+.leader {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 200px;
+  height: 200px;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle, #efe2bd 0%, #d8c28c 60%, #a88b52 100%);
+  border: 6px solid #1b140b;
+  box-shadow: 0 0 0 4px var(--gold-dark), 0 0 40px rgba(242, 193, 78, 0.35);
+  animation: leader-flicker 0.18s steps(2) infinite;
+}
+
+/* the dark wedge that sweeps round once per number */
+.leader__sweep {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(rgba(45, 30, 10, 0.5) 0deg 100deg, transparent 100deg);
+  animation: leader-sweep 1s linear infinite;
+}
+
+/* two rings and a crosshair, like a real countdown leader */
+.leader__rings {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle, transparent 0 36%, #2a1f10 36% 37.5%, transparent 37.5% 60%, #2a1f10 60% 61.5%, transparent 61.5%),
+    linear-gradient(90deg, transparent calc(50% - 1px), #2a1f10 calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(0deg, transparent calc(50% - 1px), #2a1f10 calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px));
+}
+
+.leader__number {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 6.5rem;
+  line-height: 1;
+  color: #1d1404;
+}
+
+@keyframes leader-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes leader-flicker {
+  50% {
+    filter: brightness(0.94);
+  }
+}
+
+.loading-screen__title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--gold-light);
+}
+
+.loading-screen__text {
+  margin: 0;
+  max-width: 420px;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
    Reduced motion: skip animations, show final state immediately
    ========================================================================== */
 
