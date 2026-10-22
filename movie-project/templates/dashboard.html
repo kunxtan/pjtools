@@ -8,31 +8,31 @@
 #}
 {% set charts = [
   {
-    'key': 'year', 'icon': '📈', 'title': 'จำนวนหนังและรายได้ตามปี', 'type': 'Line chart',
+    'key': 'year', 'title': 'จำนวนหนังและรายได้ตามปี', 'type': 'Line chart',
     'about': 'กราฟเส้นแสดงจำนวนหนังและรายได้รวมในแต่ละปี ใช้ดูแนวโน้มของอุตสาหกรรมภาพยนตร์ตลอด 40 ปี',
     'read': 'ดูทิศทางของเส้นรายได้ว่าเพิ่มขึ้นหรือลดลง ส่วนเส้นจำนวนหนังจะค่อนข้างคงที่ เพราะชุดข้อมูลเก็บหนังยอดนิยมประมาณปีละ 200 เรื่อง',
     'analysis': ('q3', 'ข้อ 3 แนวโน้มตามปี'),
   },
   {
-    'key': 'genre', 'icon': '📊', 'title': 'รายได้เฉลี่ยตามประเภท', 'type': 'Bar chart',
+    'key': 'genre', 'title': 'รายได้เฉลี่ยตามประเภท', 'type': 'Bar chart',
     'about': 'กราฟแท่งเปรียบเทียบรายได้เฉลี่ยต่อเรื่องของแต่ละประเภทหนัง ใช้สีประจำประเภทเดียวกับทุกหน้าในเว็บ',
     'read': 'แท่งยิ่งยาวยิ่งทำเงินต่อเรื่องได้มาก ค่าเฉลี่ยถูกดึงขึ้นได้ด้วยหนังทำเงินมหาศาลไม่กี่เรื่อง จึงควรดูคู่กับรายได้มัธยฐานในหน้าวิเคราะห์',
     'analysis': ('q2', 'ข้อ 2 ประเภทหนัง'),
   },
   {
-    'key': 'scatter', 'icon': '🔵', 'title': 'ทุนสร้างเทียบรายได้', 'type': 'Scatter plot',
+    'key': 'scatter', 'title': 'ทุนสร้างเทียบรายได้', 'type': 'Scatter plot',
     'about': 'กราฟกระจาย หนึ่งจุดคือหนังหนึ่งเรื่อง แกนนอนคือทุนสร้าง แกนตั้งคือรายได้',
     'read': 'ถ้าจุดเรียงตัวขึ้นไปทางขวาบน แปลว่ายิ่งทุนสูง รายได้มักสูงตาม ชี้ที่จุดเพื่อดูชื่อหนัง ส่วนจุดที่อยู่สูงกว่ากลุ่มมากคือหนังที่ทำเงินเกินทุนไปไกล',
     'analysis': ('q1', 'ข้อ 1 ทุนสร้างกับรายได้'),
   },
   {
-    'key': 'country', 'icon': '🗺️', 'title': 'แผนที่จำนวนหนังตามประเทศ', 'type': 'Map',
+    'key': 'country', 'title': 'แผนที่จำนวนหนังตามประเทศ', 'type': 'Map',
     'about': 'แผนที่โลกที่ระบายสีตามจำนวนหนังของประเทศผู้สร้าง เป็นมุมมองที่หน้าวิเคราะห์ในเว็บไม่มี',
     'read': 'สียิ่งเข้มยิ่งสร้างหนังมาก ชี้ที่ประเทศเพื่อดูจำนวนเรื่อง จะเห็นว่าหนังในข้อมูลกระจุกตัวอยู่ที่สหรัฐอเมริกาเป็นหลัก',
     'analysis': none,
   },
   {
-    'key': 'company', 'icon': '🏢', 'title': 'Top 10 บริษัท', 'type': 'Horizontal bar',
+    'key': 'company', 'title': 'Top 10 บริษัท', 'type': 'Horizontal bar',
     'about': 'กราฟแท่งแนวนอนของ 10 บริษัทผู้สร้างที่ทำรายได้รวมสูงสุด',
     'read': 'แท่งยิ่งยาวยิ่งทำรายได้รวมมาก บริษัทที่มีผลงานจำนวนมากมีโอกาสติดอันดับมากกว่า รายได้จึงกระจุกตัวอยู่กับสตูดิโอใหญ่ไม่กี่แห่ง',
     'analysis': ('q4', 'ข้อ 4 บริษัทและผู้กำกับ'),
@@ -45,7 +45,6 @@
     <iframe src="{{ links.embed }}" title="Tableau: {{ title }}" loading="lazy" allowfullscreen></iframe>
     {% else %}
     <p class="tableau-frame__empty">
-      <span aria-hidden="true">🎞️</span>
       ยังไม่มีกราฟนี้ ใส่ลิงก์ <code>TABLEAU_URL</code> และชื่อชีตใน <code>TABLEAU_SHEETS</code> ใน <code>app.py</code>
     </p>
     {% endif %}
@@ -68,8 +67,7 @@
 
 {% if not combined %}
 <section class="panel setup-box" aria-labelledby="setup-title">
-  <h2 class="panel__title" id="setup-title"><span aria-hidden="true">🛠️</span>
-    {% if tableau_url %}ลิงก์ Tableau ไม่อยู่ในรูปแบบที่รองรับ{% else %}ยังไม่ได้ใส่ลิงก์ Tableau{% endif %}
+  <h2 class="panel__title" id="setup-title">{% if tableau_url %}ลิงก์ Tableau ไม่อยู่ในรูปแบบที่รองรับ{% else %}ยังไม่ได้ใส่ลิงก์ Tableau{% endif %}
   </h2>
   <p>หน้านี้จะแสดงกราฟจาก Tableau Public เมื่อใส่ลิงก์แล้ว ทำตามขั้นตอนนี้:</p>
   <ol class="setup-box__steps">
@@ -86,10 +84,10 @@
 {% endif %}
 
 <aside class="notice-box notice-box--compact" aria-labelledby="snapshot-title">
-  <h2 class="notice-box__title" id="snapshot-title"><span aria-hidden="true">ℹ️</span> ข้อมูลใน Tableau เป็นข้อมูล ณ วันที่อัปโหลด</h2>
+  <h2 class="notice-box__title" id="snapshot-title">ข้อมูลใน Tableau เป็นข้อมูล ณ วันที่อัปโหลด</h2>
   <p class="notice-box__text">
     Tableau Public ไม่อัปเดตตามข้อมูลที่เพิ่มหรือแก้ไขในเว็บ ต้องเปิดไฟล์ใน Tableau กด Refresh แล้วบันทึกขึ้น Tableau Public ใหม่
-    ส่วน <span aria-hidden="true">💡</span> ตัวเลขใต้แต่ละกราฟคำนวณจากข้อมูลปัจจุบันในเว็บ และหน้า
+    ส่วนตัวเลขสำคัญใต้แต่ละกราฟคำนวณจากข้อมูลปัจจุบันในเว็บ และหน้า
     <a href="{{ url_for('analysis') }}">วิเคราะห์ข้อมูล</a> อัปเดตตามข้อมูลทันที
   </p>
 </aside>
@@ -99,7 +97,7 @@
     {% for chart in charts %}
     <li><a href="#chart-{{ chart.key }}">{{ loop.index }} · {{ chart.title }}</a></li>
     {% endfor %}
-    <li><a href="#combined">★ Dashboard รวม</a></li>
+    <li><a href="#combined">Dashboard รวม</a></li>
   </ul>
 </nav>
 
@@ -111,7 +109,7 @@
     <div>
       <p class="topic__kicker">กราฟที่ {{ loop.index }} · {{ chart.type }} · Tableau</p>
       <h2 class="topic__title" id="chart-{{ chart.key }}-title">
-        <span aria-hidden="true">{{ chart.icon }}</span> {{ chart.title }}
+        {{ chart.title }}
       </h2>
     </div>
   </header>
@@ -124,7 +122,7 @@
     <p><strong>วิธีอ่าน:</strong> {{ chart.read }}</p>
     {% if highlights[chart.key] %}
     <p class="chart-reading__highlight">
-      <span aria-hidden="true">💡</span> {{ highlights[chart.key] }}
+      <strong>ตัวเลขสำคัญ:</strong> {{ highlights[chart.key] }}
       <span class="footer-muted">(จากข้อมูลปัจจุบันในเว็บ)</span>
     </p>
     {% endif %}
@@ -138,7 +136,7 @@
     {% endif %}
     {% if chart.analysis %}
     <a href="{{ url_for('analysis') }}#{{ chart.analysis[0] }}">
-      <span aria-hidden="true">📊</span> ดูการวิเคราะห์ที่เกี่ยวข้อง: {{ chart.analysis[1] }}
+      ดูการวิเคราะห์ที่เกี่ยวข้อง: {{ chart.analysis[1] }}
     </a>
     {% endif %}
   </p>
@@ -148,7 +146,7 @@
 {# --------------------------------------------------- Full dashboard #}
 <section class="topic panel" id="combined" aria-labelledby="combined-title">
   <header class="topic__head">
-    <span class="topic__num" aria-hidden="true">★</span>
+    <span class="topic__num" aria-hidden="true">ALL</span>
     <div>
       <p class="topic__kicker">ทุกกราฟในหน้าเดียว · Tableau</p>
       <h2 class="topic__title" id="combined-title">Dashboard รวม</h2>
