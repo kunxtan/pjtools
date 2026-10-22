@@ -826,7 +826,7 @@ select:focus-visible {
   color: var(--gold);
   background: linear-gradient(180deg, #1a1305, #0d0a03);
   border-bottom: 2px solid var(--gold-dark);
-  padding: 12px 12px 10px;
+  padding: 12px 9px 10px;
   white-space: nowrap;
 }
 
@@ -853,7 +853,7 @@ select:focus-visible {
 
 .movie-table td,
 .movie-table tbody th {
-  padding: 10px 12px;
+  padding: 10px 9px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   vertical-align: middle;
   text-align: left;
@@ -879,7 +879,7 @@ select:focus-visible {
 }
 
 .cell-title {
-  min-width: 200px;
+  min-width: 170px;
 }
 
 .movie-name {
@@ -927,16 +927,57 @@ select:focus-visible {
 
 .row-actions {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   justify-content: flex-end;
+}
+
+.row-actions .btn--small {
+  padding: 4px 10px;
+}
+
+/* Laptop / tablet widths: a little more compact so all columns fit without scrolling */
+@media (min-width: 981px) and (max-width: 1240px) {
+  .movie-table {
+    font-size: 0.86rem;
+  }
+
+  .movie-table thead th {
+    font-size: 1.05rem;
+    padding: 10px 6px 8px;
+  }
+
+  .movie-table td,
+  .movie-table tbody th {
+    padding: 8px 6px;
+  }
+
+  .cell-title {
+    min-width: 130px;
+  }
+
+  .genre-badge {
+    font-size: 0.78rem;
+    padding: 1px 8px 1px 6px;
+  }
+
+  .rating-chip {
+    padding: 0 5px;
+    font-size: 0.74rem;
+  }
+
+  .row-actions .btn--small {
+    min-height: 32px;
+    padding: 3px 8px;
+    font-size: 0.8rem;
+  }
 }
 
 .row-actions form {
   margin: 0;
 }
 
-/* Mobile: every row becomes a card */
-@media (max-width: 760px) {
+/* Phones and small tablets: every row becomes a card (10 columns need ~980px) */
+@media (max-width: 980px) {
   .table-wrap {
     border: 0;
     background: none;
@@ -2769,7 +2810,7 @@ input[type="range"]:hover {
   gap: 18px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 980px) {
   .finding-grid {
     grid-template-columns: 1fr;
   }
@@ -2833,7 +2874,7 @@ input[type="range"]:hover {
   gap: 16px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 980px) {
   .shortcut-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
