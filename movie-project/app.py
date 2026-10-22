@@ -26,10 +26,10 @@ SITE_TAGLINE = "ทุกความสำเร็จของหนัง ม
 GROUP = {
     "name": "ชื่อกลุ่ม",
     "members": [
-        "นางสาว สุธีมนต์ บุญถนอม 67050592",
-        "นาย ภัทรดนัย บุญแก้ว 67051052",
         "นางสาว วนิดา พิทักษ์วัฒนานนท์ 67050499",
         "นางสาว สิริกร เจียรนัยเจริญ 67050572",
+        "นางสาว สุธีมนต์ บุญถนอม 67050592",
+        "นาย ภัทรดนัย บุญแก้ว 67051052",
     ],
 }
 DATA_SOURCE = "Movie Industry dataset (movies.csv) - 7,668 movies, 1980-2020"
@@ -37,7 +37,7 @@ DATA_SOURCE = "Movie Industry dataset (movies.csv) - 7,668 movies, 1980-2020"
 # Paste your Tableau Public link here, for example:
 #   "https://public.tableau.com/views/MovieIndustry/Dashboard"
 # Leave it empty to show setup instructions on the Dashboard page.
-TABLEAU_URL = ""
+TABLEAU_URL = "https://public.tableau.com/views/Dashboard_17926785905460/Dashboard1?:language=en-US&publish=yes&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link"
 
 # One color per genre, shared by every page and every chart.
 # Tuned in OKLCH so every color has the same weight and stays readable on the
@@ -73,11 +73,11 @@ HEAT_POSITIVE = (242, 193, 78)
 
 # Navbar entries: (endpoint, label, emoji), the same on every page.
 NAV_ITEMS = [
-    ("home", "หน้าแรก", "🏠"),
-    ("movies", "รายการหนัง", "🎞️"),
-    ("analysis", "วิเคราะห์ข้อมูล", "📊"),
-    ("simulator", "Box Office Simulator", "🎬"),
-    ("dashboard", "Dashboard", "🗺️"),
+    ("home", "หน้าแรก", ""),
+    ("movies", "รายการหนัง", ""),
+    ("analysis", "วิเคราะห์ข้อมูล", ""),
+    ("simulator", "Box Office Simulator", ""),
+    ("dashboard", "Dashboard", ""),
 ]
 
 PER_PAGE = 20
