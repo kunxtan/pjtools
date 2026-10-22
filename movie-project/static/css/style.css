@@ -1979,6 +1979,170 @@ select:focus-visible {
   color: var(--text-muted);
 }
 
+/* Comparison with Excel Analysis ToolPak */
+.toolpak-status {
+  margin-bottom: 18px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 2px solid;
+}
+
+.toolpak-status p {
+  margin: 0;
+}
+
+.toolpak-status p + p {
+  margin-top: 4px;
+}
+
+.toolpak-status--stale {
+  border-color: var(--gold);
+  background: rgba(242, 193, 78, 0.1);
+}
+
+.toolpak-status--stale strong {
+  color: var(--gold-light);
+}
+
+.toolpak-status--fresh {
+  border-color: #3fae6a;
+  background: rgba(63, 174, 106, 0.12);
+}
+
+.toolpak-status--fresh strong {
+  color: var(--success);
+}
+
+.toolpak-empty {
+  padding: 16px 18px;
+  border: 2px dashed var(--line);
+  border-radius: 10px;
+}
+
+.compare-table .compare-table__group th {
+  padding-top: 16px;
+  color: var(--gold);
+  font-weight: 700;
+  border-bottom: 1px solid var(--gold-dark);
+}
+
+.compare-table td.col-num {
+  white-space: nowrap;
+}
+
+.match-badge {
+  display: inline-block;
+  padding: 1px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.match-badge--ok {
+  background: rgba(63, 174, 106, 0.2);
+  color: var(--success);
+}
+
+.match-badge--bad {
+  background: rgba(255, 158, 158, 0.18);
+  color: var(--error);
+}
+
+/* Where a number comes from: Excel (ToolPak) or Python (computed in the web) */
+.source-chip {
+  display: inline-block;
+  padding: 1px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.source-chip--excel {
+  background: #1f7a43;
+  color: #fff;
+}
+
+.source-chip--python {
+  background: #2c5aa0;
+  color: #fff;
+}
+
+.source-line {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+}
+
+.source-line__warn {
+  color: var(--gold-light);
+  font-weight: 600;
+}
+
+/* Full ToolPak output (the main result), always visible */
+.tp-full {
+  margin-top: 14px;
+}
+
+/* Python check: a separate, clearly labelled box after the ToolPak results */
+.python-check {
+  margin-top: 28px;
+  padding: 18px 20px;
+  border: 2px solid rgba(70, 141, 229, 0.55);
+  border-radius: var(--radius);
+  background: rgba(70, 141, 229, 0.06);
+}
+
+.python-check__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  color: #cfe0ff;
+}
+
+.compare-table .col-python {
+  background: rgba(70, 141, 229, 0.09);
+}
+
+.compare-table thead .col-python {
+  color: #a9c7ff;
+}
+
+.tp-full__title {
+  font-size: 1.1rem;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.tp-full .chart-title {
+  margin-top: 8px;
+}
+
+/* Regression Statistics (2 columns) beside ANOVA (6 columns): give ANOVA more room */
+@media (min-width: 1000px) {
+  .tp-grid.tp-grid--regression {
+    grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
+  }
+}
+
+@media (max-width: 999px) {
+  .tp-grid.tp-grid--regression {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+  margin: 12px 0 18px;
+}
+
 /* ==========================================================================
    Box Office Simulator
    ========================================================================== */

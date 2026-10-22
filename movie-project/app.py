@@ -338,8 +338,10 @@ def movie_delete(movie_id):
 @app.route("/analysis", endpoint="analysis")
 def analysis_page():
     """Statistics and charts, recomputed from the current Excel file on every visit."""
-    results = analysis.run_analysis(data_service.load_movies())
-    return render_template("analysis.html", a=results, heat_style=heat_style)
+    df = data_service.load_movies()
+    results = analysis.run_analysis(df)
+    toolpak = analysis.toolpak_comparison(df, data_service.read_toolpak_results())
+    return render_template("analysis.html", a=results, toolpak=toolpak, heat_style=heat_style)
 
 
 # ---------------------------------------------------------------------------
